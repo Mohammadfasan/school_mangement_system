@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Logo from '../assets/images/logo.png';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import Notification from '../assets/images/notification.png';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -10,6 +10,25 @@ const Navbar = () => {
   const [activePage, setActivePage] = useState('Home');
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Sync active page with current route
+  useEffect(() => {
+    const pathToPage = {
+      '/': 'Home',
+      '/achievement': 'Achievement',
+      '/event': 'Event',
+      '/dashboard': 'Dashboard',
+      '/signin': 'Sign In',
+      '/signup': 'Sign Up',
+      '/timetable': 'Timetable Management',
+      '/student': 'Student Management',
+      '/sport': 'Sport Management',
+      '/notification': 'Notification'
+    };
+    
+    setActivePage(pathToPage[location.pathname] || 'Home');
+  }, [location.pathname]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -86,6 +105,14 @@ const Navbar = () => {
     { label: 'Dashboard', href: '#', route: '/dashboard' },
   ];
 
+  // Function to check if a nav item is active
+  const isItemActive = (item) => {
+    if (item.dropdown) {
+      return item.dropdown.some(dropdownItem => dropdownItem.label === activePage);
+    }
+    return item.label === activePage;
+  };
+
   return (
     <div 
       className='bg-white border-2 border-[#059669] lg:px-4 lg:py-4 rounded-3xl lg:mt-10 lg:max-w-7xl mx-auto mt-5 px-3 py-2 max-w-[350px]'
@@ -106,24 +133,28 @@ const Navbar = () => {
             className='h-8 w-8 mr-3 cursor-pointer'
             onClick={() => handleNavigation('Home')} 
           />
-          
         </div>
 
         {/* Desktop Navigation Links */}
         <nav className='hidden md:flex space-x-7'>
           {navItems.map((item) => (
-            <div key={item.label}>
+            <div key={item.label} className='relative'>
               {item.dropdown ? (
                 <div className='relative' ref={dropdownRef}>
                   <button
                     onClick={() => setIsPagesOpen(!isPagesOpen)}
-                    className={`flex items-center gap-1 font-medium transition duration-200 ${
-                      activePage === item.label ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
+                    className={`flex items-center gap-1 font-medium transition duration-200 relative pb-2 ${
+                      isItemActive(item) ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
                     }`}
                     aria-expanded={isPagesOpen}
                     aria-haspopup="true"
                   >
                     {item.label} <ChevronDown size={16} />
+                    
+                    {/* Active Green Line - Updated to 3px thickness */}
+                    {isItemActive(item) && (
+                      <div className='absolute bottom-0 left-0 w-full h-[3px] bg-[#A7F8A4] rounded-full'></div>
+                    )}
                   </button>
 
                   {isPagesOpen && (
@@ -136,9 +167,16 @@ const Navbar = () => {
                         <li key={dropdownItem.label}>
                           <button
                             onClick={() => handleNavigation(dropdownItem.label, dropdownItem.route)}
-                            className='block w-full text-left px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-[#059669] transition-colors duration-200'
+                            className={`block w-full text-left px-4 py-2 transition-colors duration-200 relative ${
+                              activePage === dropdownItem.label 
+                                ? 'text-[#059669] bg-green-50' 
+                                : 'text-gray-600 hover:bg-gray-50 hover:text-[#059669]'
+                            }`}
                           >
                             {dropdownItem.label}
+                            {activePage === dropdownItem.label && (
+                              <div className='absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-6 bg-[#059669] rounded-full'></div>
+                            )}
                           </button>
                         </li>
                       ))}
@@ -148,11 +186,16 @@ const Navbar = () => {
               ) : (
                 <button
                   onClick={() => handleNavigation(item.label, item.route)}
-                  className={`font-medium transition duration-200 ${
+                  className={`font-medium transition duration-200 relative pb-2 ${
                     activePage === item.label ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
                   }`}
                 >
                   {item.label}
+                  
+                  {/* Active Green Line - Updated to 3px thickness */}
+                  {activePage === item.label && (
+                    <div className='absolute bottom-0 left-0 w-full h-[3px] bg-[#A7F8A4] rounded-full'></div>
+                  )}
                 </button>
               )}
             </div>
@@ -163,10 +206,16 @@ const Navbar = () => {
         <div className='hidden md:flex items-center space-x-6'>
           <div className='flex items-center space-x-4'>
             <button 
-              className='text-gray-700 hover:text-[#059669] font-medium px-4 py-2 transition duration-200'
+              className={`font-medium px-4 py-2 transition duration-200 relative pb-2 ${
+                activePage === 'Sign In' ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
+              }`}
               onClick={() => handleNavigation('Sign In')}
             >
               Sign In
+              {/* Active Green Line - Updated to 3px thickness */}
+              {activePage === 'Sign In' && (
+                <div className='absolute bottom-0 left-0 w-full h-[3px] bg-[#A7F8A4] rounded-full'></div>
+              )}
             </button>
             <button 
               className='bg-[#059669] text-white font-medium px-6 py-2 rounded-lg hover:bg-[#047857] transition duration-200'
@@ -217,11 +266,17 @@ const Navbar = () => {
                 <div>
                   <button
                     onClick={() => setIsPagesOpen(!isPagesOpen)}
-                    className={`flex items-center justify-between w-full font-medium py-2 transition duration-200 ${
-                      activePage === item.label ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
+                    className={`flex items-center justify-between w-full font-medium py-2 transition duration-200 relative ${
+                      isItemActive(item) ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
                     }`}
                   >
-                    {item.label} <ChevronDown size={16} className={`transition-transform duration-200 ${isPagesOpen ? 'rotate-180' : ''}`} />
+                    <span className='flex items-center'>
+                      {item.label}
+                      {isItemActive(item) && (
+                        <div className='ml-2 w-1 h-4 bg-[#059669] rounded-full'></div>
+                      )}
+                    </span>
+                    <ChevronDown size={16} className={`transition-transform duration-200 ${isPagesOpen ? 'rotate-180' : ''}`} />
                   </button>
                   <div className={`overflow-hidden transition-all duration-300 ${
                     isPagesOpen ? 'max-h-32 opacity-100' : 'max-h-0 opacity-0'
@@ -231,9 +286,14 @@ const Navbar = () => {
                         <li key={dropdownItem.label}>
                           <button
                             onClick={() => handleNavigation(dropdownItem.label, dropdownItem.route)}
-                            className='block w-full text-left py-1 text-gray-600 hover:text-[#059669] transition duration-200'
+                            className={`flex items-center w-full text-left py-1 transition duration-200 relative ${
+                              activePage === dropdownItem.label ? 'text-[#059669]' : 'text-gray-600 hover:text-[#059669]'
+                            }`}
                           >
                             {dropdownItem.label}
+                            {activePage === dropdownItem.label && (
+                              <div className='ml-2 w-1 h-4 bg-[#059669] rounded-full'></div>
+                            )}
                           </button>
                         </li>
                       ))}
@@ -243,11 +303,14 @@ const Navbar = () => {
               ) : (
                 <button
                   onClick={() => handleNavigation(item.label, item.route)}
-                  className={`block w-full text-left font-medium py-2 transition duration-200 ${
+                  className={`flex items-center w-full text-left font-medium py-2 transition duration-200 ${
                     activePage === item.label ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
                   }`}
                 >
                   {item.label}
+                  {activePage === item.label && (
+                    <div className='ml-2 w-1 h-4 bg-[#059669] rounded-full'></div>
+                  )}
                 </button>
               )}
             </div>
@@ -256,10 +319,15 @@ const Navbar = () => {
           {/* Mobile Auth Buttons */}
           <div className='flex flex-col space-y-3 mt-2 pt-2 border-t border-gray-200'>
             <button 
-              className='text-gray-700 hover:text-[#059669] font-medium py-2 transition duration-200 text-left'
+              className={`flex items-center font-medium py-2 transition duration-200 ${
+                activePage === 'Sign In' ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
+              }`}
               onClick={() => handleNavigation('Sign In')}
             >
               Sign In
+              {activePage === 'Sign In' && (
+                <div className='ml-2 w-1 h-4 bg-[#059669] rounded-full'></div>
+              )}
             </button>
             <button 
               className='bg-[#059669] text-white font-medium py-2 rounded-lg hover:bg-[#047857] transition duration-200 text-center'
