@@ -42,7 +42,7 @@ const Feature = () => {
   return (
     <div className='mt-10 items-center justify-center py-16 px-4 sm:px-6 lg:px-8'> 
       <div className='max-w-7xl mx-auto'>
-        {/* Header Section */}
+       
         <div className='text-center mb-20'>
           <h2 className='text-5xl font-extrabold text-[#059669] mb-6'>Why This School is the Best?</h2>
           <p className='text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed'>
@@ -133,7 +133,7 @@ const Feature = () => {
                   {feature.title}
                 </h3>
                 
-                {/* Animated Underline */}
+               
                 <div className='
                   relative
                   w-16 h-1 bg-gray-300 mx-auto rounded-full
@@ -152,7 +152,7 @@ const Feature = () => {
                 </div>
               </div>
               
-              {/* Description */}
+             
               <p className='
                 text-gray-600 text-base leading-relaxed
                 transition-all duration-300
@@ -163,7 +163,7 @@ const Feature = () => {
                 {feature.description}
               </p>
 
-              {/* Hover Indicator */}
+             
               <div className='
                 absolute top-4 right-4
                 w-2 h-2 rounded-full bg-gray-400
@@ -173,7 +173,7 @@ const Feature = () => {
                 group-hover:shadow-sm
               '></div>
 
-              {/* Corner Accents */}
+              
               <div className='
                 absolute top-3 left-3 w-3 h-3
                 border-t-2 border-l-2 border-gray-300
