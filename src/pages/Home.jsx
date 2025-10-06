@@ -2,13 +2,15 @@ import React from 'react'
 import Hero from '../components/Hero'
 import Feature from '../components/Feature'
 import About from '../components/About'
+import Facilities from '../components/Facilities'
 
 const Home = () => {
   return (
-    <div className="min-h-screen bg-white">
+    <div>
       <Hero />
       <Feature /> 
       <About />
+      <Facilities />
     </div>
   )
 }
