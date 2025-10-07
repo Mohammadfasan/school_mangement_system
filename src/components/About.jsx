@@ -4,7 +4,7 @@ import AboutImage from '../assets/images/feature/about.png';
 const About = () => {
   return (
     <div className='mb-10 md:mb-20'>
-      {/* --- Heading Section --- */}
+     
       <div className='text-center px-4 sm:px-6'>
         <h2 className='text-3xl sm:text-4xl md:text-5xl font-extrabold text-[#059669] mb-4 md:mb-6 leading-tight'>
           About Us
@@ -14,10 +14,10 @@ const About = () => {
         </p>
       </div>
 
-      {/* --- Content Section (Image & Text) --- */}
+      
       <div className='py-8 sm:py-12 md:py-16 px-4 sm:px-6 lg:px-8 bg-[#059669]'>
         <div className='max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center'>
-          {/* Image Column */}
+         
           <div className='order-2 md:order-1'> 
             <img 
               src={AboutImage} 
@@ -26,7 +26,7 @@ const About = () => {
             />
           </div>
 
-          {/* Text/Description Column */}
+         
           <div className='text-white order-1 md:order-2'>
             <h3 className='text-2xl sm:text-3xl md:text-4xl font-bold mb-3 md:mb-4 leading-tight'>
               Our School Management System 🎓

@@ -2,6 +2,8 @@ import React from 'react'
 import Navbar from './components/Navbar.jsx'  
 import Home from './pages/Home.jsx'
 import { Routes, Route } from 'react-router-dom'
+import Footer from './components/Footer.jsx'
+
 
 const App = () => {
   return (
@@ -12,6 +14,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Home />} />
       </Routes>
+      <Footer />
     </>
 
   )
