@@ -130,7 +130,7 @@ const Student = () => {
       
       {/* Title and Description Section */}
       <div className="text-center mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-green-800 mb-3 mt-30">
+        <h1 className="text-2xl sm:text-3xl font-bold text-[#059669] mb-3 mt-30">
           Student Details
         </h1>
         <p className="text-gray-600 text-sm sm:text-base leading-relaxed px-2">

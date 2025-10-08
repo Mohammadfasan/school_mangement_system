@@ -37,7 +37,6 @@ const SportsCard = () => {
     'sports-meet': <Award className="w-4 h-4" />
   };
 
-  // NEW: Status badge logic
   const getStatusBadge = (status) => {
     switch (status.toLowerCase()) {
       case 'upcoming':
@@ -72,9 +71,8 @@ const SportsCard = () => {
       
       {/* Header Section */}
       <div className="max-w-7xl mx-auto text-center mb-8 sm:mb-12">
-        <div className="flex items-center justify-center mb-3 sm:mb-4">
-          <Trophy className="w-8 h-8 sm:w-12 sm:h-12 text-[#059669] mr-2 sm:mr-4" />
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
+        <div className="flex items-center justify-center mb-3 sm:mb-4 mt-30">
+          <h1 className="text-3xl sm:text-4xl font-extrabold  text-[#059669]">
             Welcome to Sport
           </h1>
         </div>
@@ -84,7 +82,7 @@ const SportsCard = () => {
         </p>
       </div>
       
-      {/* ----------------------------------------------------- */}
+     
       
       {/* Sports Cards Grid */}
       <div className="max-w-7xl mx-auto">
@@ -186,7 +184,7 @@ const SportsCard = () => {
         </div>
       </div>
       
-      {/* ----------------------------------------------------- */}
+     
 
       {/* Footer Info */}
       <div className="max-w-7xl mx-auto mt-8 sm:mt-12 text-center px-2">
