@@ -415,3 +415,98 @@ export const sportsCardsData = [
 
 export { Volleyball, Cricket, Football, Sportmeet, athletic };
 export default sportsCardsData;
+
+import ScienceFacility from './feature/ScienceFair.png';
+import LeadershipCamp from './feature/leadership-award.png';
+import MusicConcert from './feature/MusicCompetition.png';
+import AcadamicAward from './feature/AcademicAward.png';
+import sports from './feature/sports-achievement.png';
+import cultural from './feature/cultural-event.png';
+import Debate from './feature/debate-championship.png';
+export const achievementData = [
+  {
+    id: 1,
+    title: "Inter-School Football Championship",
+    award: "1st Place",
+    student: "Ahmed",
+    grade: "10",
+    date: "12 Sept 2025",
+    venue: "Colombo Sports Complex",
+    description: "The school football team secured the championship title in a thrilling final match against Royal College.",
+    category: "Sport",
+    image: sports,
+    highlight: true,
+    colorCode: "bg-[#059669]", // Green for Sport, matches your screenshot
+  },
+  {
+    id: 2,
+    title: "National Science Fair",
+    award: "Best Innovation Award",
+    student: "Isuru Perera",
+    grade: "12",
+    date: "05 Oct 2025",
+    venue: "Bandaranaike Memorial International Conference Hall",
+    description: "Isuru's project on sustainable water purification won the top innovation prize.",
+    category: "Academic",
+    image: ScienceFacility,
+    highlight: true,
+    colorCode: "bg-[#3B82F6]", // Blue for Academic
+  },
+  {
+    id: 3,
+    title: "All-Island Music Competition",
+    award: "Best Vocalist",
+    student: "Nimali Silva",
+    grade: "11",
+    date: "28 Aug 2025",
+    venue: "Nelum Pokuna Theatre",
+    description: "Nimali delivered a stunning performance, earning the Best Vocalist award.",
+    category: "Cultural",
+    image: MusicConcert,
+    highlight: false,
+    colorCode: "bg-[#EC4899]", // Pink for Cultural
+  },
+  {
+    id: 4,
+    title: "Annual Leadership Camp",
+    award: "Outstanding Leader",
+    student: "Priyanka Rathnayake",
+    grade: "13",
+    date: "10 Nov 2025",
+    venue: "School Auditorium",
+    description: "Priyanka demonstrated exceptional teamwork and initiative during the camp's challenges.",
+    category: "Leadership",
+    image: LeadershipCamp,
+    highlight: false,
+    colorCode: "bg-[#F59E0B]", // Amber for Leadership
+  },
+  {
+    id: 5,
+    title: "Inter-School Debate Championship",
+    award: "Runner-up",
+    student: "The Debate Team",
+    grade: "9-13",
+    date: "20 Sept 2025",
+    venue: "Royal College Main Hall",
+    description: "The team performed admirably, making it to the finals of the prestigious debate championship.",
+    category: "Academic",
+    image: Debate,
+    highlight: false,
+    colorCode: "bg-[#3B82F6]", // Blue for Academic
+  },
+  {
+    id: 6,
+    title: "Grade 10 Top Scorer",
+    award: "Academic Excellence",
+    student: "Kamal De Silva",
+    grade: "10",
+    date: "15 Jan 2025",
+    venue: "School Prize Giving",
+    description: "Kamal achieved the highest overall GPA in his grade for the previous year.",
+    category: "Academic",
+    image: AcadamicAward,
+    highlight: true,
+    colorCode: "bg-[#3B82F6]", // Blue for Academic
+  },
+  
+];

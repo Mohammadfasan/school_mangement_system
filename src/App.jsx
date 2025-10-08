@@ -6,6 +6,7 @@ import Footer from './components/Footer.jsx'
 import Timetable from './pages/Timetable.jsx'
 import Student from './pages/Student.jsx'
 import Sport from './pages/Sport.jsx'
+import Achievement from './pages/Achievement.jsx'
 
 const App = () => {
   return (
@@ -18,7 +19,7 @@ const App = () => {
         <Route path="/timetable" element={<Timetable />} />
         <Route path="/student" element={<Student />} />
         <Route path="/sport" element={<Sport />} />
-    
+        <Route path="/achievement" element={<Achievement />} />
       </Routes>
       <Footer />
     </>
