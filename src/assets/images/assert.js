@@ -506,7 +506,9 @@ export const achievementData = [
     category: "Academic",
     image: AcadamicAward,
     highlight: true,
-    colorCode: "bg-[#3B82F6]", // Blue for Academic
+    colorCode: "bg-[#3B82F6]", 
   },
   
 ];
+
+

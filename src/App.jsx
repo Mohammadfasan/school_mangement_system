@@ -7,7 +7,7 @@ import Timetable from './pages/Timetable.jsx'
 import Student from './pages/Student.jsx'
 import Sport from './pages/Sport.jsx'
 import Achievement from './pages/Achievement.jsx'
-
+import Event from './pages/Event.jsx'
 const App = () => {
   return (
     <>
@@ -20,6 +20,8 @@ const App = () => {
         <Route path="/student" element={<Student />} />
         <Route path="/sport" element={<Sport />} />
         <Route path="/achievement" element={<Achievement />} />
+        <Route path="/event" element={<Event />} />
+        
       </Routes>
       <Footer />
     </>
