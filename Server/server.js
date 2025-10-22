@@ -15,6 +15,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes.js'));
+app.use('/api/timetable', require('./routes/timtableRoutes.js'));
 
 // Basic route
 app.get('/', (req, res) => {
