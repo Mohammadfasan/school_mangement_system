@@ -19,6 +19,8 @@ app.use('/api/timetable', require('./routes/timtableRoutes.js'));
 app.use('/api/students', require('./routes/studentRoutes.js'));
 app.use('/api/sports', require('./routes/sportRoutes.js'));
 app.use('/api/events', require('./routes/eventRoutes.js'));
+app.use('/api/achievements', require('./routes/achievementRoutes.js'));
+app.use('/api/announcements', require('./routes/announcementRoutes.js'));
 
 
 // Basic route
