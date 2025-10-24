@@ -17,6 +17,9 @@ app.use(express.json());
 app.use('/api/auth', require('./routes/authRoutes.js'));
 app.use('/api/timetable', require('./routes/timtableRoutes.js'));
 app.use('/api/students', require('./routes/studentRoutes.js'));
+app.use('/api/sports', require('./routes/sportRoutes.js'));
+app.use('/api/events', require('./routes/eventRoutes.js'));
+
 
 // Basic route
 app.get('/', (req, res) => {
