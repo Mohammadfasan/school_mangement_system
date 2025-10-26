@@ -1,3 +1,4 @@
+// routes/sportRoutes.js
 const express = require('express');
 const {
   getAllSports,
@@ -11,18 +12,16 @@ const {
 const { protect } = require('../middleware/auth');
 const { authorize } = require('../middleware/roleMiddleware');
 
-const router=express.Router();
-router.use(protect);
+const router = express.Router();
 
-
-//public Routes
+// Public routes (no authentication needed for viewing)
 router.get('/', getAllSports);
 router.get('/status/:status', getSportsByStatus);
 router.get('/:id', getSportById);
 
-// Admin only routes
-router.get('/', authorize('admin'), getAllSports);
-router.get('/status/overview', authorize('admin'), getSportsStats);
+// Protected admin routes
+router.use(protect);
+router.get('/stats/overview', authorize('admin'), getSportsStats);
 router.post('/create-sport', authorize('admin'), createSport);
 router.put('/update-sport/:id', authorize('admin'), updateSport);
 router.delete('/delete-sport/:id', authorize('admin'), deleteSport);

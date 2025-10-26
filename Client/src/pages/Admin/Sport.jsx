@@ -1,320 +1,249 @@
-// src/pages/Admin/Sport.jsx
+import React, { useState, useEffect } from 'react';
+import { studentService } from '../../services/studentService';
+import { Edit, Trash2, Plus } from 'lucide-react';
 
-import React, { useState } from 'react';
-import { sportsCardsData as initialData } from '../../assets/images/assert.js'; // Import static data
-import { Edit, Trash2 } from 'lucide-react'; // Icons for action buttons
-
-// --- Helper function to get initial data ---
-// Reads from localStorage or uses initial data and saves it.
-const getInitialSportsData = () => {
-  const savedSports = localStorage.getItem('sports');
-  if (savedSports) {
-    return JSON.parse(savedSports);
-  } else {
-    // If nothing in localStorage, use initialData and save it
-    localStorage.setItem('sports', JSON.stringify(initialData));
-    return initialData;
-  }
-};
-
-const Sport = () => {
-  // State to hold the list of all sports events
-  // MODIFIED: Now uses the helper function to load from localStorage
-  const [sportsData, setSportsData] = useState(getInitialSportsData);
-  
-  // State to manage the form inputs for adding or editing an event
-  const [formState, setFormState] = useState({
-    id: null,
-    title: '',
-    type: '',
-    date: '',
-    time: '',
-    venue: '',
-    participatingTeam: '',
-    status: 'upcoming',
-    details: '',
-    image: null,        // To hold the raw file object
-    imagePreview: '',   // To hold the URL for the preview
-  });
-
-  // State to track if the form is in 'edit' mode or 'add' mode
+const Student = () => {
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentStudent, setCurrentStudent] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Update form state as the user types
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormState(prevState => ({ ...prevState, [name]: value }));
-  };
-  
-  // Handle the image file selection
-  const handleImageChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      // Create a temporary URL for the selected image to show a preview
-      const previewUrl = URL.createObjectURL(file);
-      setFormState(prevState => ({
-        ...prevState,
-        image: file,        // The actual file
-        imagePreview: previewUrl, // The preview URL
-      }));
+  // Fetch students from backend
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      const response = await studentService.getAllStudents();
+      setStudents(response.data);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      alert('Failed to fetch students');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Reset the form to its initial empty state
-  const resetForm = () => {
-    // Revoke the object URL to prevent memory leaks
-    if (formState.imagePreview && formState.imagePreview.startsWith('blob:')) {
-      URL.revokeObjectURL(formState.imagePreview);
-    }
+  const handleAdd = () => {
+    setCurrentStudent({ name: '', address: '', grade: 'Grade 1', gender: 'Male' });
     setIsEditing(false);
-    setFormState({
-      id: null,
-      title: '',
-      type: '',
-      date: '',
-      time: '',
-      venue: '',
-      participatingTeam: '',
-      status: 'upcoming',
-      details: '',
-      image: null,
-      imagePreview: '',
-    });
+    setIsModalOpen(true);
   };
 
-  // Handle the form submission
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if (isEditing) {
-      // If editing, find the existing event and update it
-      const updatedSport = {
-        ...formState,
-        // If a new image was uploaded (imagePreview is a blob), use it.
-        // Otherwise, keep the original image from sportsData.
-        image: formState.imagePreview,
-      };
-
-      // MODIFIED: Create new array and save to localStorage
-      const updatedData = sportsData.map(sport => sport.id === formState.id ? updatedSport : sport );
-      setSportsData(updatedData);
-      localStorage.setItem('sports', JSON.stringify(updatedData)); // <-- SAVE TO LOCALSTORAGE
-      
-      alert('Sport event updated successfully!');
-    } else {
-      // If not editing, create a new event
-      const newSport = {
-        ...formState,
-        id: sportsData.length > 0 ? Math.max(...sportsData.map(s => s.id)) + 1 : 1,
-        // Use the preview URL for the image property
-        image: formState.imagePreview || 'https://via.placeholder.com/400x300.png?text=Sport+Event',
-      };
-
-      // MODIFIED: Create new array and save to localStorage
-      const updatedData = [...sportsData, newSport];
-      setSportsData(updatedData);
-      localStorage.setItem('sports', JSON.stringify(updatedData)); // <-- SAVE TO LOCALSTORAGE
-
-      alert('New sport event added successfully!');
-    }
-    
-    resetForm();
-  };
-
-  // Set the form state when the 'Edit' button is clicked
-  const handleEdit = (sport) => {
-    window.scrollTo(0, 0); // Scroll to top to see the form
+  const handleEdit = (student) => {
+    setCurrentStudent(student);
     setIsEditing(true);
-    // Set the form state to the data of the sport being edited
-    setFormState({
-      ...sport,
-      imagePreview: sport.image, // Set the preview to the existing image URL
-      image: null,               // Clear the file input
-    });
+    setIsModalOpen(true);
   };
 
-  // Delete a sport event after confirmation
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this sport event?')) {
-      
-      // MODIFIED: Create new array and save to localStorage
-      const updatedData = sportsData.filter(sport => sport.id !== id);
-      setSportsData(updatedData);
-      localStorage.setItem('sports', JSON.stringify(updatedData)); // <-- SAVE TO LOCALSTORAGE
-
-      alert('Sport event deleted successfully!');
-      // If the deleted item was being edited, reset the form
-      if (isEditing && formState.id === id) {
-        resetForm();
+  const handleDelete = async (studentId) => {
+    if (window.confirm(`Are you sure you want to delete this student?`)) {
+      try {
+        await studentService.deleteStudent(studentId);
+        alert('Student deleted successfully!');
+        fetchStudents(); // Refresh the list
+      } catch (error) {
+        console.error('Error deleting student:', error);
+        alert('Failed to delete student');
       }
     }
   };
 
-  // Helper function to get badge colors based on status
-  const getStatusBadge = (status) => {
-    switch (status.toLowerCase()) {
-      case 'upcoming':
-        return 'bg-blue-100 text-blue-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'live':
-        return 'bg-red-100 text-red-800 animate-pulse';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!currentStudent.name || !currentStudent.address) {
+      alert('Please fill in all fields.');
+      return;
+    }
+
+    try {
+      if (isEditing) {
+        await studentService.updateStudent(currentStudent.id, currentStudent);
+        alert('Student updated successfully!');
+      } else {
+        await studentService.createStudent(currentStudent);
+        alert('New student added successfully!');
+      }
+
+      setIsModalOpen(false);
+      setCurrentStudent(null);
+      fetchStudents(); // Refresh the list
+    } catch (error) {
+      console.error('Error saving student:', error);
+      alert('Failed to save student');
     }
   };
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setCurrentStudent({ ...currentStudent, [name]: value });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Welcome to Sports Management</h1>
-
-     
-      <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md mb-8 max-w-4xl mx-auto">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">
-          {isEditing ? 'Edit Sport Event' : 'Add New Sport Event'}
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Responsive grid: 1 col on mobile, 2 on desktop (already responsive) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
-              <input type="text" name="title" id="title" value={formState.title} onChange={handleInputChange} className="w-full p-3 bg-white border border-gray-300 rounded-lg shadow-sm" required />
-            </div>
-            <div>
-              <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">Sport Type</label>
-              <input type="text" name="type" id="type" value={formState.type} onChange={handleInputChange} className="w-full p-3 bg-white border border-gray-300 rounded-lg shadow-sm" placeholder="e.g., Basketball, Track" />
-            </div>
-            <div>
-              <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-              <input type="date" name="date" id="date" value={formState.date} onChange={handleInputChange} className="w-full p-3 bg-white border border-gray-300 rounded-lg shadow-sm" />
-            </div>
-            <div>
-              <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-1">Time</label>
-              <input type="time" name="time" id="time" value={formState.time} onChange={handleInputChange} className="w-full p-3 bg-white border border-gray-300 rounded-lg shadow-sm" />
-            </div>
-            <div>
-              <label htmlFor="venue" className="block text-sm font-medium text-gray-700 mb-1">Venue</label>
-              <input type="text" name="venue" id="venue" value={formState.venue} onChange={handleInputChange} className="w-full p-3 bg-white border border-gray-300 rounded-lg shadow-sm" />
-            </div>
-            <div>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select name="status" id="status" value={formState.status} onChange={handleInputChange} className="w-full p-3 bg-white border border-gray-300 rounded-lg shadow-sm">
-                <option value="upcoming">Upcoming</option>
-                <option value="live">Live</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
-            <div className="md:col-span-2">
-              <label htmlFor="participatingTeam" className="block text-sm font-medium text-gray-700 mb-1">Participating Teams</label>
-              <input type="text" name="participatingTeam" id="participatingTeam" value={formState.participatingTeam} onChange={handleInputChange} className="w-full p-3 bg-white border border-gray-300 rounded-lg shadow-sm" />
-            </div>
-            <div className="md:col-span-2">
-              <label htmlFor="details" className="block text-sm font-medium text-gray-700 mb-1">Event Details</label>
-              <textarea name="details" id="details" rows="3" value={formState.details} onChange={handleInputChange} className="w-full p-3 bg-white border border-gray-300 rounded-lg shadow-sm"></textarea>
-            </div>
-            <div className="md:col-span-2">
-              <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">Event Image</label>
-              <input type="file" name="image" id="image" onChange={handleImageChange} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100" />
-            </div>
-            {/* Image preview section */}
-            {formState.imagePreview && (
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Image Preview</label>
-                <img src={formState.imagePreview} alt="Event Preview" className="w-full h-48 object-cover rounded-lg shadow-sm" />
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-2">
-            {isEditing && (
-              <button 
-                type="button" 
-                onClick={resetForm} 
-                className="w-full sm:w-auto px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-            )}
-            <button 
-              type="submit" 
-              className="w-full sm:w-auto px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-            >
-              {isEditing ? 'Update Event' : 'Save Event'}
-            </button>
-          </div>
-        </form>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 space-y-4 sm:space-y-0">
+        <h1 className="text-2xl font-bold text-gray-800">Welcome to Student Management</h1>
+        <button
+          onClick={handleAdd}
+          className="w-full sm:w-auto flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 transition-colors"
+        >
+          <Plus size={18} className="mr-2" />
+          Add Student
+        </button>
       </div>
 
-      <div className="mt-10">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">Current Sports Events</h2>
+      {/* Mobile Card View */}
+      <div className="space-y-4 md:hidden">
+        {students.map((student, index) => (
+          <div key={student.id} className="bg-white rounded-lg shadow-md p-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="text-md font-semibold text-gray-900">{student.name}</h3>
+                <p className="text-sm text-gray-600">{student.grade}</p>
+                <p className="text-sm text-gray-500 mt-1">{student.address}</p>
+              </div>
+              <span className="flex-shrink-0 text-sm font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
+                {student.gender}
+              </span>
+            </div>
+            <div className="flex justify-end space-x-3 pt-3 mt-3 border-t border-gray-100">
+              <button onClick={() => handleEdit(student)} className="text-indigo-600 hover:text-indigo-900" title="Edit">
+                <Edit size={18} />
+              </button>
+              <button onClick={() => handleDelete(student.id)} className="text-red-600 hover:text-red-900" title="Delete">
+                <Trash2 size={18} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
 
-        
-        <div className="space-y-4 md:hidden">
-          {sportsData.map(sport => (
-            <div key={sport.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-              <img src={sport.image} alt={sport.title} className="w-full h-32 object-cover" />
-              <div className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900 pr-2">{sport.title}</h3>
-                  <span className={`flex-shrink-0 px-3 py-1 rounded-full font-semibold text-xs capitalize ${getStatusBadge(sport.status)}`}>
-                      {sport.status}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600 mb-1">{sport.venue}</p>
-                <p className="text-sm text-gray-500">{sport.type}</p>
-                
-                <div className="flex justify-end space-x-3 pt-4 mt-4 border-t border-gray-100">
-                  <button onClick={() => handleEdit(sport)} className="text-indigo-600 hover:text-indigo-900" title="Edit">
+      {/* Desktop Table View */}
+      <div className="hidden md:block overflow-x-auto bg-white rounded-lg shadow-md">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {students.map((student, index) => (
+              <tr key={student.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{student.name}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.address}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.grade}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.gender}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center space-x-4">
+                  <button onClick={() => handleEdit(student)} className="text-indigo-600 hover:text-indigo-900" title="Edit">
                     <Edit size={18} />
                   </button>
-                  <button onClick={() => handleDelete(sport.id)} className="text-red-600 hover:text-red-900" title="Delete">
+                  <button onClick={() => handleDelete(student.id)} className="text-red-600 hover:text-red-900" title="Delete">
                     <Trash2 size={18} />
                   </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {isModalOpen && currentStudent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-2xl p-6 sm:p-8 w-full max-w-lg mx-auto">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">
+              {isEditing ? 'Edit Student' : 'Add New Student'}
+            </h2>
+            <form onSubmit={handleSave}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    id="name"
+                    value={currentStudent.name}
+                    onChange={handleInputChange}
+                    className="w-full p-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    disabled={isEditing}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                  <input
+                    type="text"
+                    name="address"
+                    id="address"
+                    value={currentStudent.address}
+                    onChange={handleInputChange}
+                    className="w-full p-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="grade" className="block text-sm font-medium text-gray-700 mb-2">Grade</label>
+                  <select
+                    name="grade"
+                    id="grade"
+                    value={currentStudent.grade}
+                    onChange={handleInputChange}
+                    className="w-full p-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option>Grade 1</option>
+                    <option>Grade 2</option>
+                    <option>Grade 3</option>
+                    <option>Grade 4</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                  <select
+                    name="gender"
+                    id="gender"
+                    value={currentStudent.gender}
+                    onChange={handleInputChange}
+                    className="w-full p-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option>Male</option>
+                    <option>Female</option>
+                  </select>
                 </div>
               </div>
-            </div>
-          ))}
+
+              <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-2 space-y-reverse sm:space-y-0">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="w-full sm:w-auto px-6 py-2 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="w-full sm:w-auto px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-        
-        <div className="hidden md:block overflow-x-auto bg-white rounded-lg shadow-md">
-            <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                    <tr>
-                        <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
-                        <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                        <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Venue</th>
-                        <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-4 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                    {sportsData.map(sport => (
-                        <tr key={sport.id} className="hover:bg-gray-50">
-                            <td className="px-4 sm:px-6 py-4">
-                                <img src={sport.image} alt={sport.title} className="w-20 h-16 object-cover rounded-md shadow-sm" />
-                            </td>
-                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sport.title}</td>
-                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sport.venue}</td>
-                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm">
-                                <span className={`px-3 py-1 rounded-full font-semibold text-xs capitalize ${getStatusBadge(sport.status)}`}>
-                                    {sport.status}
-                                </span>
-                            </td>
-                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-center space-x-4">
-                                <button onClick={() => handleEdit(sport)} className="text-indigo-600 hover:text-indigo-900" title="Edit">
-                                  <Edit size={18} />
-                                </button>
-                                <button onClick={() => handleDelete(sport.id)} className="text-red-600 hover:text-red-900" title="Delete">
-                                  <Trash2 size={18} />
-                                </button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
 
-export default Sport;
+export default Student;

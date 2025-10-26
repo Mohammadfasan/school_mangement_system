@@ -1,3 +1,4 @@
+// models/Event.js
 const mongoose = require('mongoose');
 
 const eventSchema = new mongoose.Schema({
@@ -51,6 +52,10 @@ const eventSchema = new mongoose.Schema({
   organizer: {
     type: String,
     default: 'School Administration'
+  },
+  time: {
+    type: String,
+    default: ''
   },
   days_left: {
     type: Number,

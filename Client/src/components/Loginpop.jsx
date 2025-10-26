@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { X, Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { useAuth } from '../Context/AuthContext';
 
-// 1. Accept 'onSwitchToSignup' in props
 const LoginPopup = ({ isOpen, onClose, onSwitchToSignup }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const { signin, authLoading } = useAuth();
 
-  // ... (useEffect, handleChange, handleSubmit, handleOverlayClick functions remain the same) ...
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -43,18 +42,13 @@ const LoginPopup = ({ isOpen, onClose, onSwitchToSignup }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
     
     try {
-      console.log('Login attempt:', formData);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      alert('Login successful!');
+      await signin(formData);
       onClose();
       setFormData({ email: '', password: '' });
     } catch (error) {
-      console.error('Login error:', error);
-    } finally {
-      setIsLoading(false);
+      alert(error.message);
     }
   };
 
@@ -64,17 +58,14 @@ const LoginPopup = ({ isOpen, onClose, onSwitchToSignup }) => {
     }
   };
 
-
   if (!isOpen) return null;
 
   return (
     <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 mt-20 "
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 mt-20"
       onClick={handleOverlayClick}
     >
-    
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all duration-300 scale-100 border border-[#059669]  ">
-        {/* ... (Header remains the same) ... */}
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all duration-300 scale-100 border border-[#059669]">
         <div className="relative p-6 border-b border-gray-200">
           <h2 className="text-2xl font-bold text-gray-900 text-center">Welcome Back</h2>
           <p className="text-gray-600 text-center mt-2">Sign in to your account</p>
@@ -88,7 +79,6 @@ const LoginPopup = ({ isOpen, onClose, onSwitchToSignup }) => {
           </button>
         </div>
 
-        {/* ... (Form fields remain the same) ... */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Email Field */}
           <div className="space-y-2">
@@ -166,10 +156,10 @@ const LoginPopup = ({ isOpen, onClose, onSwitchToSignup }) => {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={authLoading}
             className="w-full bg-[#059669] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#047857] transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
-            {isLoading ? (
+            {authLoading ? (
               <div className="flex items-center justify-center">
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                 Signing in...
@@ -186,8 +176,7 @@ const LoginPopup = ({ isOpen, onClose, onSwitchToSignup }) => {
               <button
                 type="button"
                 className="text-[#059669] hover:text-[#047857] font-medium transition-colors duration-200"
-                // 2. Use the new prop here
-                onClick={onSwitchToSignup} 
+                onClick={onSwitchToSignup}
               >
                 Sign up
               </button>
@@ -195,7 +184,7 @@ const LoginPopup = ({ isOpen, onClose, onSwitchToSignup }) => {
           </div>
         </form>
 
-        {/* ... (Social Login Options remain the same) ... */}
+        {/* Social Login Options */}
         <div className="px-6 pb-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">

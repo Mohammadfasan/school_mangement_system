@@ -1,27 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Logo from '../assets/images/logo.png';
-import { Menu, X, ChevronDown } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut } from 'lucide-react';
 import Notification from '../assets/images/notification.png';
 import { useNavigate, useLocation } from 'react-router-dom';
 import NotificationPopup from '../pages/NotificationPopup';
-import LoginPopup from './Loginpop'; 
-import SignupPopup from './SignupPopup'; // 1. Import SignupPopup
+import { useAuth } from '../Context/AuthContext';
 
-const Navbar = () => {
+const Navbar = ({ onLoginClick, onSignupClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isPagesOpen, setIsPagesOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false); 
-  const [isLoginOpen, setIsLoginOpen] = useState(false); 
-  const [isSignupOpen, setIsSignupOpen] = useState(false); // 2. Add state for SignupPopup
-  
   const [activePage, setActivePage] = useState('Home');
   
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null); 
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, isAuthenticated, logout } = useAuth();
 
-  // ... (useEffect hooks remain the same) ...
+  // Debug user data - ENHANCED LOGS
+  useEffect(() => {
+    
+  }, [user, isAuthenticated]);
+
   useEffect(() => {
     const pathToPage = {
       '/': 'Home',
@@ -52,48 +53,6 @@ const Navbar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-
-  // --- 3. UPDATED POPUP HANDLERS ---
-
-  // Function to open login popup (and close signup)
-  const openLoginPopup = () => {
-    setIsSignupOpen(false); // Close other popup
-    setIsLoginOpen(true);
-    setIsMenuOpen(false);
-  };
-
-  // Function to close login popup
-  const closeLoginPopup = () => {
-    setIsLoginOpen(false);
-  };
-  
-  // Function to open signup popup (and close login)
-  const openSignupPopup = () => {
-    setIsLoginOpen(false); // Close other popup
-    setIsSignupOpen(true);
-    setIsMenuOpen(false);
-  };
-
-  // Function to close signup popup
-  const closeSignupPopup = () => {
-    setIsSignupOpen(false);
-  };
-
-  // Function to switch from Login -> Signup
-  const handleSwitchToSignup = () => {
-    closeLoginPopup();
-    setTimeout(() => openSignupPopup(), 100); // 100ms delay for smooth transition
-  };
-
-  // Function to switch from Signup -> Login
-  const handleSwitchToLogin = () => {
-    closeSignupPopup();
-    setTimeout(() => openLoginPopup(), 100);
-  };
-
-  // --- END OF POPUP HANDLERS ---
-
-
   // Navigation function
   const handleNavigation = (pageName, route = '') => {
     setActivePage(pageName);
@@ -108,12 +67,21 @@ const Navbar = () => {
         case 'Home': navigate('/'); break;
         case 'Achievement': navigate('/achievement'); break;
         case 'Event': navigate('/event'); break;
-        case 'Dashboard': navigate('/dashboard'); break;
+        case 'Dashboard': 
+         
+          
+          // Check role field for admin
+          if (isAuthenticated && user?.role === 'admin') {
+            navigate('/dashboard');
+          } else {
+            onLoginClick();
+          }
+          break;
         case 'Sign In': 
-          openLoginPopup(); // 4. Use new smart function
+          onLoginClick();
           break;
         case 'Sign Up': 
-          openSignupPopup(); // 5. Use new smart function
+          onSignupClick();
           break;
         case 'Timetable Management': navigate('/timetable'); break;
         case 'Student Management': navigate('/student'); break;
@@ -123,26 +91,48 @@ const Navbar = () => {
     }
   };
 
+  // Logout function
+  const handleLogout = () => {
+    logout();
+    setIsMenuOpen(false);
+    navigate('/');
+  };
+
   // Toggle function for notification popup
   const toggleNotifications = () => {
     setIsNotificationOpen(prevState => !prevState);
   };
 
-  const navItems = [
-    { label: 'Home', href: '#', route: '/' },
-    { 
-      label: 'Pages', 
-      href: '#', 
-      dropdown: [
-        { label: 'Timetable Management', route: '/timetable' },
-        { label: 'Student Management', route: '/student' },
-        { label: 'Sport Management', route: '/sport' }
-      ]
-    },
-    { label: 'Achievement', href: '#', route: '/achievement' },
-    { label: 'Event', href: '#', route: '/event' },
-    { label: 'Dashboard', href: '#', route: '/dashboard' },
-  ];
+  // Define nav items - Show Dashboard only for admin users
+  const getNavItems = () => {
+    const baseItems = [
+      { label: 'Home', href: '#', route: '/' },
+      { 
+        label: 'Pages', 
+        href: '#', 
+        dropdown: [
+          { label: 'Timetable Management', route: '/timetable' },
+          { label: 'Student Management', route: '/student' },
+          { label: 'Sport Management', route: '/sport' }
+        ]
+      },
+      { label: 'Achievement', href: '#', route: '/achievement' },
+      { label: 'Event', href: '#', route: '/event' },
+    ];
+
+    const shouldShowDashboard = isAuthenticated && user?.role === 'admin';
+   
+    
+    if (shouldShowDashboard) {
+      baseItems.push({ label: 'Dashboard', href: '#', route: '/dashboard' });
+    } else {
+      console.log('❌ NOT adding Dashboard to navbar');
+    }
+
+    return baseItems;
+  };
+
+  const navItems = getNavItems();
 
   const isItemActive = (item) => {
     if (item.dropdown) {
@@ -151,8 +141,13 @@ const Navbar = () => {
     return item.label === activePage;
   };
 
+  // Check if user is admin
+  const isAdminUser = user?.role === 'admin';
+
   return (
     <>
+     
+
       <div 
         className='bg-white border-2 border-[#059669] lg:px-4 lg:py-4 rounded-3xl lg:mt-10 lg:max-w-7xl mx-auto mt-5 px-3 py-2 max-w-[350px]'
         onKeyDown={(e) => {
@@ -164,7 +159,6 @@ const Navbar = () => {
         }}
       >
         <div className='flex items-center justify-between'>
-          {/* ... (Logo and desktop nav items remain the same) ... */}
           <div className='flex items-center'>
             <img src={Logo} alt="Sport Logo" className='h-8 w-8 mr-3 cursor-pointer' onClick={() => handleNavigation('Home')} />
           </div>
@@ -235,25 +229,46 @@ const Navbar = () => {
 
           <div className='hidden md:flex items-center space-x-6'>
             <div className='flex items-center space-x-4'>
-              <button 
-                className={`font-medium px-4 py-2 transition duration-200 relative pb-2 ${
-                  activePage === 'Sign In' ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
-                }`}
-                onClick={openLoginPopup} // Already correct
-              >
-                Sign In
-                {activePage === 'Sign In' && (
-                  <div className='absolute bottom-0 left-0 w-full h-[3px] bg-[#A7F8A4] rounded-full'></div>
-                )}
-              </button>
-              <button 
-                className='bg-[#059669] text-white font-medium px-6 py-2 rounded-lg hover:bg-[#047857] transition duration-200'
-                onClick={openSignupPopup} // 6. Update this onClick
-              >
-                SIGN UP
-              </button>
+              {!isAuthenticated ? (
+                <>
+                  <button 
+                    className={`font-medium px-4 py-2 transition duration-200 relative pb-2 ${
+                      activePage === 'Sign In' ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
+                    }`}
+                    onClick={onLoginClick}
+                  >
+                    Sign In
+                    {activePage === 'Sign In' && (
+                      <div className='absolute bottom-0 left-0 w-full h-[3px] bg-[#A7F8A4] rounded-full'></div>
+                    )}
+                  </button>
+                  <button 
+                    className='bg-[#059669] text-white font-medium px-6 py-2 rounded-lg hover:bg-[#047857] transition duration-200'
+                    onClick={onSignupClick}
+                  >
+                    SIGN UP
+                  </button>
+                </>
+              ) : (
+                <div className='flex items-center space-x-4'>
+                  <div className='flex items-center space-x-3'>
+                    <span className='text-gray-700 font-medium'>Welcome, {user?.firstName || user?.name || 'User'}</span>
+                    {isAdminUser && (
+                      <span className='bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full'>
+                        Admin
+                      </span>
+                    )}
+                  </div>
+                  <button 
+                    onClick={handleLogout}
+                    className='flex items-center space-x-2 bg-red-500 text-white font-medium px-4 py-2 rounded-lg hover:bg-red-600 transition duration-200'
+                  >
+                    <LogOut size={16} />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
             </div>
-            {/* ... (Notification button remains the same) ... */}
             <div className='relative' ref={notificationRef}>
               <button onClick={toggleNotifications} className="relative">
                 <img 
@@ -267,7 +282,6 @@ const Navbar = () => {
             </div>
           </div>
 
-          {/* ... (Mobile menu and notification buttons remain the same) ... */}
           <div className='relative md:hidden flex items-center' ref={notificationRef}>
             <button onClick={toggleNotifications} className="relative mr-2">
               <img 
@@ -290,7 +304,6 @@ const Navbar = () => {
           </button>
         </div>
 
-        {/* ... (Mobile nav items map remains the same) ... */}
         <div className={`md:hidden overflow-hidden transition-all duration-300 ${
           isMenuOpen ? 'max-h-100 opacity-100 mt-4 pb-2 border-t border-gray-200 pt-4' : 'max-h-0 opacity-0'
         }`}>
@@ -352,39 +365,49 @@ const Navbar = () => {
             ))}
             
             <div className='flex flex-col space-y-3 mt-2 pt-2 border-t border-gray-200'>
-              <button 
-                className={`flex items-center font-medium py-2 transition duration-200 ${
-                  activePage === 'Sign In' ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
-                }`}
-                onClick={openLoginPopup} // Already correct
-              >
-                Sign In
-                {activePage === 'Sign In' && (
-                  <div className='ml-2 w-1 h-4 bg-[#059669] rounded-full'></div>
-                )}
-              </button>
-              <button 
-                className='bg-[#059669] text-white font-medium py-2 rounded-lg hover:bg-[#047857] transition duration-200 text-center'
-                onClick={openSignupPopup} // 7. Update this onClick
-              >
-                SIGN UP
-              </button>
+              {!isAuthenticated ? (
+                <>
+                  <button 
+                    className={`flex items-center font-medium py-2 transition duration-200 ${
+                      activePage === 'Sign In' ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
+                    }`}
+                    onClick={onLoginClick}
+                  >
+                    Sign In
+                    {activePage === 'Sign In' && (
+                      <div className='ml-2 w-1 h-4 bg-[#059669] rounded-full'></div>
+                    )}
+                  </button>
+                  <button 
+                    className='bg-[#059669] text-white font-medium py-2 rounded-lg hover:bg-[#047857] transition duration-200 text-center'
+                    onClick={onSignupClick}
+                  >
+                    SIGN UP
+                  </button>
+                </>
+              ) : (
+                <div className='flex flex-col space-y-3'>
+                  <div className='flex flex-col space-y-2 py-2'>
+                    <span className='text-gray-700 font-medium'>Welcome, {user?.firstName || user?.name || 'User'}</span>
+                    {isAdminUser && (
+                      <span className='bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full text-center w-fit'>
+                        Admin
+                      </span>
+                    )}
+                  </div>
+                  <button 
+                    onClick={handleLogout}
+                    className='flex items-center justify-center space-x-2 bg-red-500 text-white font-medium py-2 rounded-lg hover:bg-red-600 transition duration-200'
+                  >
+                    <LogOut size={16} />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
             </div>
           </nav>
         </div>
       </div>
-
-      {/* 8. RENDER BOTH POPUPS AND PASS THE SWITCHER FUNCTIONS */}
-      <LoginPopup 
-        isOpen={isLoginOpen} 
-        onClose={closeLoginPopup} 
-        onSwitchToSignup={handleSwitchToSignup}
-      />
-      <SignupPopup 
-        isOpen={isSignupOpen} 
-        onClose={closeSignupPopup} 
-        onSwitchToLogin={handleSwitchToLogin}
-      />
     </>
   );
 };

@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react';
-import { achievementData } from '../assets/images/assert';
+// src/pages/Achievement.jsx
+import React, { useState, useMemo, useEffect } from 'react';
+import { achievementService } from '../services/achievementService';
 import { 
   Trophy, 
   User,
-  GraduationCap,
   Calendar,
   MapPin,
   Star,
@@ -18,6 +18,8 @@ const categoryIcons = {
   Academic: <BookOpen className="w-5 h-5" />,
   Cultural: <Palette className="w-5 h-5" />,
   Leadership: <Users className="w-5 h-5" />,
+  Art: <Feather className="w-5 h-5" />,
+  Other: <Star className="w-5 h-5" />,
 };
 
 // Map categories to Tailwind colors for buttons
@@ -26,19 +28,32 @@ const categoryColors = {
   Academic: 'bg-blue-500 hover:bg-blue-600',
   Cultural: 'bg-pink-500 hover:bg-pink-600',
   Leadership: 'bg-amber-500 hover:bg-amber-600',
+  Art: 'bg-purple-500 hover:bg-purple-600',
+  Other: 'bg-gray-500 hover:bg-gray-600',
 };
 
 // Map categories to actual color values for card backgrounds
 const categoryBackgroundColors = {
   Sport: '#059669',
   Academic: '#3b82f6',
-  Cultural: '#5b0a3cff',
-  Leadership: '#503506ff',
+  Cultural: '#ec4899',
+  Leadership: '#f59e0b',
+  Art: '#8b5cf6',
+  Other: '#6b7280',
 };
 
 const AchievementCard = ({ achievement }) => {
   const getBackgroundColor = (category) => {
-    return categoryBackgroundColors[category] || '#059669'; // Default to Sport color
+    return categoryBackgroundColors[category] || '#059669';
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
 
   return (
@@ -96,7 +111,7 @@ const AchievementCard = ({ achievement }) => {
         {/* Date */}
         <div className="flex items-center text-sm sm:text-base">
           <Calendar className="w-4 h-4 mr-3 flex-shrink-0" />
-          <span className="font-semibold">Date: {achievement.date}</span>
+          <span className="font-semibold">Date: {formatDate(achievement.date)}</span>
         </div>
 
         {/* Venue */}
@@ -104,6 +119,13 @@ const AchievementCard = ({ achievement }) => {
           <MapPin className="w-4 h-4 mr-3 flex-shrink-0" />
           <span className="font-semibold">Venue: {achievement.venue}</span>
         </div>
+
+        {/* Description */}
+        {achievement.description && (
+          <div className="pt-3 border-t border-white/20">
+            <p className="text-sm opacity-90">{achievement.description}</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -111,23 +133,55 @@ const AchievementCard = ({ achievement }) => {
 
 const Achievement = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [achievementsData, setAchievementsData] = useState([]);
+  const [loading, setLoading] = useState(true);
   
-  const categories = useMemo(() => {
-    const allCategories = achievementData.map(item => item.category);
-    return ['All', ...new Set(allCategories)]; 
+  // Fetch achievements from backend
+  useEffect(() => {
+    fetchAchievements();
   }, []);
+
+  const fetchAchievements = async () => {
+    try {
+      setLoading(true);
+      const response = await achievementService.getAllAchievements();
+      setAchievementsData(response.data.data || response.data);
+    } catch (error) {
+      console.error('Error fetching achievements:', error);
+      alert('Failed to fetch achievements');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const categories = useMemo(() => {
+    const allCategories = achievementsData.map(item => item.category);
+    return ['All', ...new Set(allCategories)]; 
+  }, [achievementsData]);
 
   const filteredAchievements = useMemo(() => {
     if (selectedCategory === 'All') {
-      return achievementData;
+      return achievementsData;
     }
-    return achievementData.filter(item => item.category === selectedCategory);
-  }, [selectedCategory]);
+    return achievementsData.filter(item => item.category === selectedCategory);
+  }, [selectedCategory, achievementsData]);
   
-  // Find the highlight card to put it first, if filtering allows it
-  const highlightCard = filteredAchievements.find(item => item.highlight);
-  const otherCards = filteredAchievements.filter(item => !item.highlight || item.id !== highlightCard?.id);
-  const cardsToDisplay = highlightCard ? [highlightCard, ...otherCards] : otherCards;
+  // Sort achievements: highlighted first, then by date
+  const sortedAchievements = useMemo(() => {
+    return [...filteredAchievements].sort((a, b) => {
+      if (a.highlight && !b.highlight) return -1;
+      if (!a.highlight && b.highlight) return 1;
+      return new Date(b.date) - new Date(a.date);
+    });
+  }, [filteredAchievements]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-gray-50 py-10 sm:py-16 px-4">
@@ -135,17 +189,12 @@ const Achievement = () => {
         
         {/* Header Section */}
         <div className="text-center mb-10 sm:mb-12 mt-30">
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#059669] mb-3 ">
-            Achievement
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#059669] mb-3">
+            Achievement Gallery
           </h1>
           <p className="text-sm sm:text-lg text-gray-600 max-w-4xl mx-auto leading-relaxed">
-            Students and teachers can view a card-based list of achievements earned in academics, sports, cultural,
-            and other activities. Each achievement card shows the award title, student name, grade, date, and
-            category. Color-coding helps to quickly identify achievement type (e.g., sports, academic, cultural). 
-            A search bar and filters allow users to find achievements by student, class, category, or year. Clicking 
-            on a card reveals more details such as event name, description, and uploaded certificates or photos. 
-            Teachers and admins can add new achievements with a simple form, including title, student/team, date, 
-            category, and attachments. A highlight section showcases top or recent achievements for quick recognition.
+            Celebrating the outstanding accomplishments of our students in academics, sports, cultural activities, 
+            leadership, and arts. Each achievement represents dedication, hard work, and excellence.
           </p>
         </div>
         
@@ -160,21 +209,29 @@ const Achievement = () => {
                   selectedCategory === category
                     ? categoryColors[category] || 'bg-gray-700 hover:bg-gray-800'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                } ${selectedCategory === category ? 'text-white' : ''} `}
+                } ${selectedCategory === category ? 'text-white' : ''}`}
             >
               {category !== 'All' && categoryIcons[category]}
               <span className={category !== 'All' ? 'ml-2' : ''}>{category}</span>
             </button>
           ))}
         </div>
+
+        {/* Achievement Counter */}
+        <div className="text-center mb-6">
+          <p className="text-gray-600">
+            Showing {sortedAchievements.length} of {achievementsData.length} achievements
+            {selectedCategory !== 'All' && ` in ${selectedCategory}`}
+          </p>
+        </div>
         
         {/* Achievement Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
-          {cardsToDisplay.map((achievement) => (
-            <AchievementCard key={achievement.id} achievement={achievement} />
+          {sortedAchievements.map((achievement) => (
+            <AchievementCard key={achievement._id || achievement.id} achievement={achievement} />
           ))}
 
-          {cardsToDisplay.length === 0 && (
+          {sortedAchievements.length === 0 && (
             <div className="md:col-span-2 xl:col-span-3 text-center py-10 text-gray-500 text-lg">
               No achievements found for the selected category.
             </div>

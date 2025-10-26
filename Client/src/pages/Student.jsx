@@ -1,185 +1,383 @@
-import React, { useState } from 'react';
-import { studentsData } from '../assets/images/assert';
+import React, { useState, useEffect } from 'react';
+import { studentService } from '../services/studentService';
+import { Search, Filter, Users, MapPin, Calendar } from 'lucide-react';
 
 const Student = () => {
-  // Define the grades and initial state
-  const grades = ["Grade 1", "Grade 2", "Grade 3", "Grade 4"];
-  const [selectedGrade, setSelectedGrade] = useState("Grade 1"); 
+  const [students, setStudents] = useState([]);
+  const [filteredStudents, setFilteredStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedGrade, setSelectedGrade] = useState('all');
+  const [selectedGender, setSelectedGender] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statistics, setStatistics] = useState(null);
 
-  // Filter students based on the selected grade
-  const filteredStudents = studentsData.students.filter(
-    (student) => student.grade === selectedGrade
-  );
+  const grades = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
 
-  // --- Utility Classes and Styles (using Green) ---
-  const buttonClass = (grade) => 
-    `px-4 py-3 sm:px-6 sm:py-2 rounded-lg cursor-pointer transition-colors duration-200 text-sm font-semibold w-full sm:w-auto
-     ${selectedGrade === grade 
-        ? 'bg-green-500 text-white shadow-md'
-        : 'bg-green-100 text-green-700 hover:bg-green-200'
-      }`;
+  useEffect(() => {
+    fetchStudents();
+    fetchStatistics();
+  }, []);
 
-  // Container for the table structure on Lg screens and up
-  const desktopTableContainerClass = 'hidden lg:block border-2 border-green-600 rounded-lg mt-6 overflow-hidden shadow-xl';
-  
-  // Container for the card structure on screens smaller than Lg
-  const mobileCardContainerClass = 'block lg:hidden mt-6 space-y-4';
+  useEffect(() => {
+    filterStudents();
+  }, [students, selectedGrade, selectedGender, searchTerm]);
 
-  // Desktop grid layout
-  const gridLayoutClass = 'grid grid-cols-[1fr_2fr_1fr]'; 
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      const response = await studentService.getAllStudents();
+      setStudents(response.data.students || response.data);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      alert('Failed to fetch students');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Desktop header cell styles
-  const headerCellClass = 'p-4 font-semibold text-left text-white bg-green-600 border-r border-green-700 last:border-r-0';
-  
-  // Desktop data cell styles
-  const dataCellClass = 'p-4 text-left border-b border-r border-green-200 text-gray-700 last:border-r-0';
-  const lastRowClass = 'border-b-0'; 
+  const fetchStatistics = async () => {
+    try {
+      const response = await studentService.getStudentStatistics();
+      setStatistics(response.data);
+    } catch (error) {
+      console.error('Error fetching statistics:', error);
+    }
+  };
 
-  // --- Mobile Card Rendering Function ---
-  const renderMobileCards = () => (
-    <div className={mobileCardContainerClass}>
-      <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 text-center sm:text-left">
-        Grade {selectedGrade.split(' ')[1]} Students ({filteredStudents.length})
-      </h3>
-      
-      {filteredStudents.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 sm:gap-3">
-          {filteredStudents.map((student, index) => (
-            <div 
-              key={index} 
-              className="bg-white p-4 rounded-lg shadow-md border border-green-200 hover:shadow-lg transition-shadow duration-200"
-            >
-              {/* Student Name - More prominent on mobile */}
-              <div className="text-center sm:text-left mb-3 pb-2 border-b border-green-100">
-                <h4 className="font-bold text-green-700 text-lg">{student.name}</h4>
-              </div>
-              
-              {/* Student Details */}
-              <div className="space-y-3">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
-                  <span className="font-semibold text-green-600 text-sm mb-1 sm:mb-0">Address:</span>
-                  <span className="text-gray-700 text-sm sm:text-right break-words">{student.address}</span>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
-                  <span className="font-semibold text-green-600 text-sm mb-1 sm:mb-0">Grade:</span>
-                  <span className="text-gray-700 text-sm">{student.grade}</span>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
-                  <span className="font-semibold text-green-600 text-sm mb-1 sm:mb-0">Gender:</span>
-                  <span className="text-gray-700 text-sm">{student.gender}</span>
-                </div>
-              </div>
-            </div>
-          ))}
+  const filterStudents = () => {
+    let filtered = students;
+
+    // Filter by grade
+    if (selectedGrade !== 'all') {
+      filtered = filtered.filter(student => student.grade === selectedGrade);
+    }
+
+    // Filter by gender
+    if (selectedGender !== 'all') {
+      filtered = filtered.filter(student => student.gender === selectedGender);
+    }
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(student =>
+        student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (student.email && student.email.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+
+    setFilteredStudents(filtered);
+  };
+
+  const getGradeDisplayName = (grade) => {
+    return `Grade ${grade}`;
+  };
+
+  const getGenderDisplay = (gender) => {
+    const genderMap = {
+      'male': 'Male',
+      'female': 'Female',
+      'other': 'Other'
+    };
+    return genderMap[gender] || gender;
+  };
+
+  const getGenderColor = (gender) => {
+    const colorMap = {
+      'male': 'bg-blue-100 text-blue-800 border-blue-200',
+      'female': 'bg-pink-100 text-pink-800 border-pink-200',
+      'other': 'bg-purple-100 text-purple-800 border-purple-200'
+    };
+    return colorMap[gender] || 'bg-gray-100 text-gray-800 border-gray-200';
+  };
+
+  const getGradeColor = (grade) => {
+    const gradeColors = {
+      '1': 'bg-green-100 text-green-800 border-green-200',
+      '2': 'bg-blue-100 text-blue-800 border-blue-200',
+      '3': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      '4': 'bg-red-100 text-red-800 border-red-200',
+      '5': 'bg-purple-100 text-purple-800 border-purple-200',
+      '6': 'bg-indigo-100 text-indigo-800 border-indigo-200',
+      '7': 'bg-pink-100 text-pink-800 border-pink-200',
+      '8': 'bg-orange-100 text-orange-800 border-orange-200',
+      '9': 'bg-teal-100 text-teal-800 border-teal-200',
+      '10': 'bg-cyan-100 text-cyan-800 border-cyan-200',
+      '11': 'bg-lime-100 text-lime-800 border-lime-200',
+      '12': 'bg-amber-100 text-amber-800 border-amber-200'
+    };
+    return gradeColors[grade] || 'bg-gray-100 text-gray-800 border-gray-200';
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading students...</p>
         </div>
-      ) : (
-        <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
-          <p className="text-gray-500 text-lg">No students found for {selectedGrade}</p>
-          <p className="text-gray-400 text-sm mt-2">Please select a different grade</p>
-        </div>
-      )}
-    </div>
-  );
-
-  // --- Desktop Table Rendering Function ---
-  const renderDesktopTable = () => (
-    <div className={desktopTableContainerClass}>
-      {/* Table Header */}
-      <div className={gridLayoutClass} style={{ minHeight: '40px' }}>
-        <div className={headerCellClass}>Name</div>
-        <div className={headerCellClass}>Address</div>
-        <div className={headerCellClass}>Gender</div>
       </div>
-
-      {/* Data Rows */}
-      <div className="min-h-[300px]"> 
-        {filteredStudents.map((student, index) => {
-          const isLastRow = index === filteredStudents.length - 1;
-          return (
-            <div key={index} className={`${gridLayoutClass}`}>
-              <div className={`${dataCellClass} ${isLastRow ? lastRowClass : ''}`}>
-                {student.name}
-              </div>
-              <div className={`${dataCellClass} ${isLastRow ? lastRowClass : ''}`}>
-                {student.address}
-              </div>
-              <div className={`${dataCellClass} ${isLastRow ? lastRowClass : ''}`}>
-                {student.gender}
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Fill remaining space with empty rows */}
-        {Array.from({ length: Math.max(0, 8 - filteredStudents.length) }).map((_, index) => {
-          const isLastPlaceholder = index === Math.max(0, 8 - filteredStudents.length) - 1;
-          return (
-            <div key={`empty-${index}`} className={gridLayoutClass}>
-              <div className={`${dataCellClass} ${isLastPlaceholder ? lastRowClass : ''}`}>&nbsp;</div>
-              <div className={`${dataCellClass} ${isLastPlaceholder ? lastRowClass : ''}`}>&nbsp;</div>
-              <div className={`${dataCellClass} ${isLastPlaceholder ? lastRowClass : ''}`}>&nbsp;</div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+    );
+  }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
-      
-      {/* Title and Description Section */}
-      <div className="text-center mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-[#059669] mb-3 mt-30">
-          Student Details
-        </h1>
-        <p className="text-gray-600 text-sm sm:text-base leading-relaxed px-2">
-          Students and teachers can view a card-based list of achievements earned in academics, sports, cultural,
-          and other activities. Each achievement card shows the award title, student name, grade, date, and
-          category. Color-coding helps to quickly identify achievement type.
-        </p>
-      </div>
-
-      {/* Grade Filter Buttons - Mobile Responsive */}
-      <div className="mb-6 sm:mb-8">
-        <h3 className="text-lg font-semibold text-gray-700 mb-3 text-center sm:text-left">
-          Select Grade:
-        </h3>
-        <div className="grid grid-cols-2 gap-3 sm:flex sm:justify-start sm:space-x-4 sm:gap-0">
-          {grades.map((grade) => (
-            <button 
-              key={grade}
-              className={buttonClass(grade)}
-              onClick={() => setSelectedGrade(grade)}
-            >
-              {grade.replace(' ', '')} 
-            </button>
-          ))}
+    <div className="min-h-screen bg-gray-50">
+      {/* Header Section */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              Our Students
+            </h1>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Meet the bright minds of our school community. Discover talented students across all grades 
+              who are achieving excellence in academics, sports, and extracurricular activities.
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Student Count - Mobile Friendly */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 sm:mb-6">
-        <p className="text-green-700 text-center sm:text-left text-sm">
-          Showing <span className="font-bold">{filteredStudents.length}</span> student(s) in {selectedGrade}
-        </p>
-      </div>
-
-      {/* Render Desktop Table (lg:block) */}
-      {renderDesktopTable()}
-
-      {/* Render Mobile Cards (lg:hidden) */}
-      {renderMobileCards()}
-
-      {/* Empty State for No Students */}
-      {filteredStudents.length === 0 && (
-        <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200 mt-6">
-          <div className="text-6xl mb-4">📚</div>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">No Students Found</h3>
-          <p className="text-gray-500">There are no students enrolled in {selectedGrade}.</p>
+      {/* Statistics Section */}
+      {statistics && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-lg shadow-sm p-4 text-center">
+              <Users className="h-8 w-8 text-green-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-gray-900">{statistics.data?.totalStudents || 0}</div>
+              <div className="text-sm text-gray-600">Total Students</div>
+            </div>
+            <div className="bg-white rounded-lg shadow-sm p-4 text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                {statistics.data?.genderStats?.find(g => g._id === 'male')?.count || 0}
+              </div>
+              <div className="text-sm text-gray-600">Male Students</div>
+            </div>
+            <div className="bg-white rounded-lg shadow-sm p-4 text-center">
+              <div className="text-2xl font-bold text-pink-600">
+                {statistics.data?.genderStats?.find(g => g._id === 'female')?.count || 0}
+              </div>
+              <div className="text-sm text-gray-600">Female Students</div>
+            </div>
+            <div className="bg-white rounded-lg shadow-sm p-4 text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {statistics.data?.gradeStats?.length || 0}
+              </div>
+              <div className="text-sm text-gray-600">Active Grades</div>
+            </div>
+          </div>
         </div>
       )}
 
+      {/* Filters Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Search */}
+            <div className="md:col-span-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <input
+                  type="text"
+                  placeholder="Search by name, address, or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Grade Filter */}
+            <div>
+              <select
+                value={selectedGrade}
+                onChange={(e) => setSelectedGrade(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="all">All Grades</option>
+                {grades.map(grade => (
+                  <option key={grade} value={grade}>{getGradeDisplayName(grade)}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Gender Filter */}
+            <div>
+              <select
+                value={selectedGender}
+                onChange={(e) => setSelectedGender(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="all">All Genders</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Active Filters Display */}
+          <div className="flex flex-wrap gap-2 mt-4">
+            {selectedGrade !== 'all' && (
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getGradeColor(selectedGrade)} border`}>
+                Grade {selectedGrade}
+                <button 
+                  onClick={() => setSelectedGrade('all')}
+                  className="ml-2 hover:opacity-70"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {selectedGender !== 'all' && (
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getGenderColor(selectedGender)} border`}>
+                {getGenderDisplay(selectedGender)}
+                <button 
+                  onClick={() => setSelectedGender('all')}
+                  className="ml-2 hover:opacity-70"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {searchTerm && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 border border-gray-200">
+                Search: "{searchTerm}"
+                <button 
+                  onClick={() => setSearchTerm('')}
+                  className="ml-2 hover:opacity-70"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Results Count */}
+        <div className="mb-6">
+          <p className="text-lg text-gray-700">
+            Showing <span className="font-semibold text-green-600">{filteredStudents.length}</span> 
+            {filteredStudents.length === 1 ? ' student' : ' students'}
+            {selectedGrade !== 'all' && ` in Grade ${selectedGrade}`}
+            {selectedGender !== 'all' && ` (${getGenderDisplay(selectedGender)})`}
+          </p>
+        </div>
+
+        {/* Students Grid */}
+        {filteredStudents.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredStudents.map((student) => (
+              <div 
+                key={student._id} 
+                className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-300 overflow-hidden"
+              >
+                {/* Student Header */}
+                <div className="p-6 pb-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-1">{student.name}</h3>
+                      <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getGradeColor(student.grade)} border`}>
+                        Grade {student.grade}
+                      </span>
+                    </div>
+                    <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getGenderColor(student.gender)} border`}>
+                      {getGenderDisplay(student.gender)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Student Details */}
+                <div className="px-6 pb-6">
+                  {/* Address */}
+                  <div className="flex items-start mb-4">
+                    <MapPin className="h-5 w-5 text-gray-400 mr-3 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Address</p>
+                      <p className="text-sm text-gray-600 mt-1">{student.address}</p>
+                    </div>
+                  </div>
+
+                  {/* Contact Information */}
+                  {(student.email || student.phone) && (
+                    <div className="mb-4">
+                      <p className="text-sm font-medium text-gray-700 mb-2">Contact</p>
+                      <div className="space-y-1">
+                        {student.email && (
+                          <p className="text-sm text-gray-600 flex items-center">
+                            <span className="mr-2">📧</span>
+                            {student.email}
+                          </p>
+                        )}
+                        {student.phone && (
+                          <p className="text-sm text-gray-600 flex items-center">
+                            <span className="mr-2">📞</span>
+                            {student.phone}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Parent Information */}
+                  {(student.parentName || student.parentPhone) && (
+                    <div className="border-t border-gray-100 pt-4">
+                      <p className="text-sm font-medium text-gray-700 mb-2">Parent Info</p>
+                      <div className="space-y-1">
+                        {student.parentName && (
+                          <p className="text-sm text-gray-600">👨‍👩‍👧‍👦 {student.parentName}</p>
+                        )}
+                        {student.parentPhone && (
+                          <p className="text-sm text-gray-600">📞 {student.parentPhone}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* Empty State */
+          <div className="text-center py-16 bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="text-6xl mb-4">🎓</div>
+            <h3 className="text-2xl font-semibold text-gray-700 mb-2">No Students Found</h3>
+            <p className="text-gray-500 max-w-md mx-auto mb-6">
+              {searchTerm || selectedGrade !== 'all' || selectedGender !== 'all' 
+                ? "Try adjusting your search criteria or filters to find more students."
+                : "There are currently no students in the system."}
+            </p>
+            {(searchTerm || selectedGrade !== 'all' || selectedGender !== 'all') && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedGrade('all');
+                  setSelectedGender('all');
+                }}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Clear All Filters
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Grade Distribution Chart (Simplified) */}
+        {statistics?.data?.gradeStats && (
+          <div className="mt-12 bg-white rounded-lg shadow-sm p-6">
+            <h3 className="text-xl font-semibold text-gray-900 mb-6">Students by Grade</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {statistics.data.gradeStats.map((gradeStat) => (
+                <div key={gradeStat._id} className="text-center">
+                  <div className={`h-16 rounded-lg flex items-center justify-center mb-2 ${getGradeColor(gradeStat._id)}`}>
+                    <span className="text-2xl font-bold">{gradeStat.count}</span>
+                  </div>
+                  <div className="text-sm font-medium text-gray-700">Grade {gradeStat._id}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Eye, EyeOff, Mail, Lock, User, Phone, Calendar, CheckCircle } from 'lucide-react';
+import { X, Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
+import { useAuth } from '../Context/AuthContext';
 
 const SignupPopup = ({ isOpen, onClose, onSwitchToLogin }) => {
   const [formData, setFormData] = useState({
@@ -14,11 +15,10 @@ const SignupPopup = ({ isOpen, onClose, onSwitchToLogin }) => {
   
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [currentStep, setCurrentStep] = useState(1);
+  const { signup, authLoading } = useAuth();
 
-  // ... (all your useEffect hooks are perfect, no changes needed) ...
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -42,9 +42,6 @@ const SignupPopup = ({ isOpen, onClose, onSwitchToLogin }) => {
     };
   }, [isOpen]);
 
-  
-  // ... (all your handler functions like handleChange, validateStep1, etc. are fine, no changes needed) ...
-
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -57,10 +54,15 @@ const SignupPopup = ({ isOpen, onClose, onSwitchToLogin }) => {
     }
   };
 
+  const validatePasswordStrength = (password) => {
+    const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    return strongRegex.test(password);
+  };
+
   const validateStep1 = () => {
     const newErrors = {};
-    if (!formData.firstName) newErrors.firstName = "First name is required";
-    if (!formData.lastName) newErrors.lastName = "Last name is required";
+    if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
+    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
     if (!formData.email) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -68,7 +70,7 @@ const SignupPopup = ({ isOpen, onClose, onSwitchToLogin }) => {
     }
     if (!formData.phone) {
       newErrors.phone = "Phone number is required";
-    } else if (!/^\+?[0-9]{10,15}$/.test(formData.phone)) {
+    } else if (!/^\+?[\d\s\-\(\)]{10,15}$/.test(formData.phone.replace(/\s/g, ''))) {
       newErrors.phone = "Phone number is invalid";
     }
     
@@ -82,6 +84,8 @@ const SignupPopup = ({ isOpen, onClose, onSwitchToLogin }) => {
       newErrors.password = "Password is required";
     } else if (formData.password.length < 8) {
       newErrors.password = "Password must be at least 8 characters";
+    } else if (!validatePasswordStrength(formData.password)) {
+      newErrors.password = "Password must include uppercase, lowercase, number and special character";
     }
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
@@ -110,12 +114,9 @@ const SignupPopup = ({ isOpen, onClose, onSwitchToLogin }) => {
       return;
     }
 
-    setIsLoading(true);
     try {
-      console.log('Creating account with:', formData);
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      alert('Account created successfully!');
-      onClose(); 
+      await signup(formData);
+      onClose();
       // Reset form on close
       setFormData({
         firstName: '', lastName: '', email: '', phone: '',
@@ -123,10 +124,7 @@ const SignupPopup = ({ isOpen, onClose, onSwitchToLogin }) => {
       });
       setCurrentStep(1);
     } catch (error) {
-      console.error('Signup error:', error);
-      setErrors({ form: 'An unexpected error occurred. Please try again.' });
-    } finally {
-      setIsLoading(false);
+      setErrors({ form: error.message });
     }
   };
   
@@ -140,7 +138,6 @@ const SignupPopup = ({ isOpen, onClose, onSwitchToLogin }) => {
     onClose();
     setTimeout(onSwitchToLogin, 150);
   };
-
 
   if (!isOpen) return null;
 
@@ -171,12 +168,17 @@ const SignupPopup = ({ isOpen, onClose, onSwitchToLogin }) => {
 
         {/* Form Content */}
         <form onSubmit={handleSubmit} className="p-6">
+          {errors.form && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 text-sm">{errors.form}</p>
+            </div>
+          )}
+
           {/* Step 1: Personal Details */}
           {currentStep === 1 && (
             <div className="space-y-4">
-              {/* This grid is already responsive, great job! */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* ... (First Name) ... */}
+                {/* First Name */}
                 <div className="space-y-2">
                   <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">First Name</label>
                   <div className="relative">
@@ -192,7 +194,8 @@ const SignupPopup = ({ isOpen, onClose, onSwitchToLogin }) => {
                   </div>
                   {errors.firstName && <p className="text-xs text-red-600">{errors.firstName}</p>}
                 </div>
-                {/* ... (Last Name) ... */}
+                
+                {/* Last Name */}
                 <div className="space-y-2">
                   <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Last Name</label>
                   <div className="relative">
@@ -210,7 +213,7 @@ const SignupPopup = ({ isOpen, onClose, onSwitchToLogin }) => {
                 </div>
               </div>
               
-              {/* ... (Email) ... */}
+              {/* Email */}
               <div className="space-y-2">
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email Address</label>
                 <div className="relative">
@@ -227,7 +230,7 @@ const SignupPopup = ({ isOpen, onClose, onSwitchToLogin }) => {
                 {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
               </div>
 
-              {/* ... (Phone) ... */}
+              {/* Phone */}
               <div className="space-y-2">
                 <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
                 <div className="relative">
@@ -258,7 +261,7 @@ const SignupPopup = ({ isOpen, onClose, onSwitchToLogin }) => {
           {/* Step 2: Security */}
           {currentStep === 2 && (
             <div className="space-y-4">
-              {/* ... (Password) ... */}
+              {/* Password */}
               <div className="space-y-2">
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
                 <div className="relative">
@@ -282,7 +285,7 @@ const SignupPopup = ({ isOpen, onClose, onSwitchToLogin }) => {
                 {errors.password && <p className="text-xs text-red-600">{errors.password}</p>}
               </div>
 
-              {/* ... (Confirm Password) ... */}
+              {/* Confirm Password */}
               <div className="space-y-2">
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">Confirm Password</label>
                 <div className="relative">
@@ -306,7 +309,7 @@ const SignupPopup = ({ isOpen, onClose, onSwitchToLogin }) => {
                 {errors.confirmPassword && <p className="text-xs text-red-600">{errors.confirmPassword}</p>}
               </div>
               
-              {/* ... (Terms) ... */}
+              {/* Terms */}
               <div className="flex items-start">
                 <input
                   id="agreeToTerms" name="agreeToTerms" type="checkbox"
@@ -332,10 +335,10 @@ const SignupPopup = ({ isOpen, onClose, onSwitchToLogin }) => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={authLoading}
                   className="flex-1 bg-[#059669] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#047857] transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
-                  {isLoading ? (
+                  {authLoading ? (
                     <div className="flex items-center justify-center">
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                       Creating Account...

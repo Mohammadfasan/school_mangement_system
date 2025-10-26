@@ -1,3 +1,4 @@
+// routes/eventRoutes.js
 const express = require('express');
 const {
   getAllEvents,
@@ -26,4 +27,5 @@ router.post('/create-event', authorize('admin'), createEvent);
 router.put('/update-event/:id', authorize('admin'), updateEvent);
 router.delete('/delete-event/:id', authorize('admin'), deleteEvent);
 router.get('/stats/overview', authorize('admin'), getEventsStats);
+
 module.exports = router;

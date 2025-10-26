@@ -1,12 +1,13 @@
-// components/Admin_page/navbar_adi.jsx
-
+// src/components/Admin_page/navbar_adi.jsx
 import React from 'react';
 import { FiBell, FiMenu } from 'react-icons/fi'; 
 import { BiSolidCircle } from 'react-icons/bi';
 import { useLocation } from 'react-router-dom';
+import { useAuth } from '../../Context/AuthContext';
 
 const Navbar_adi = ({ toggleSidebar }) => {
   const location = useLocation();
+  const { user } = useAuth();
   
   const getPageTitle = () => {
     const path = location.pathname;
@@ -18,11 +19,13 @@ const Navbar_adi = ({ toggleSidebar }) => {
       '/dashboard/sport_manage': 'Sport Management',
       '/dashboard/achievement_manage': 'Achievement Management',
       '/dashboard/student_manage': 'Student Management',
-      '/dashboard/teacher_manage': 'Teacher Management'
     };
+    
+    // Find the best matching route
     const matchingKey = Object.keys(titleMap)
-                            .sort((a, b) => b.length - a.length)
-                            .find(key => path.startsWith(key));
+      .sort((a, b) => b.length - a.length)
+      .find(key => path.startsWith(key));
+    
     return titleMap[matchingKey] || 'Dashboard';
   };
 
@@ -50,7 +53,7 @@ const Navbar_adi = ({ toggleSidebar }) => {
             <BiSolidCircle className="absolute -top-1 -right-1 text-red-500 text-xs" />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-gray-800">Admin User</span>
+            <span className="text-sm font-semibold text-gray-800">{user?.name || 'Admin User'}</span>
             <span className="text-xs text-gray-500 hidden sm:block">Administrator</span>
           </div>
         </div>

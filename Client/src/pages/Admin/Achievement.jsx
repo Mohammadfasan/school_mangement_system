@@ -1,12 +1,12 @@
 // src/pages/Admin/Achievement.jsx
 
-import React, { useState } from 'react';
-import { achievementData as initialData } from '../../assets/images/assert.js';
+import React, { useState, useEffect } from 'react';
+import { achievementService } from '../../services/achievementService'
 import { Edit, Trash2 } from 'lucide-react';
 
-const Achievement= () => {
-  const [achievementsData, setAchievementsData] = useState(initialData);
-  
+const Achievement = () => {
+  const [achievementsData, setAchievementsData] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [formState, setFormState] = useState({
     id: null,
     title: '',
@@ -21,6 +21,24 @@ const Achievement= () => {
   });
 
   const [isEditing, setIsEditing] = useState(false);
+
+  // Fetch achievements from backend
+  useEffect(() => {
+    fetchAchievements();
+  }, []);
+
+  const fetchAchievements = async () => {
+    try {
+      setLoading(true);
+      const response = await achievementService.getAllAchievements();
+      setAchievementsData(response.data);
+    } catch (error) {
+      console.error('Error fetching achievements:', error);
+      alert('Failed to fetch achievements');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -58,28 +76,36 @@ const Achievement= () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    try {
+      const formData = new FormData();
+      formData.append('title', formState.title);
+      formData.append('student', formState.student);
+      formData.append('award', formState.award);
+      formData.append('category', formState.category);
+      formData.append('date', formState.date);
+      formData.append('venue', formState.venue);
+      formData.append('description', formState.description);
+      if (formState.image) {
+        formData.append('image', formState.image);
+      }
 
-    if (isEditing) {
-      const updatedAchievement = {
-        ...formState,
-        image: formState.imagePreview, 
-      };
-      setAchievementsData(
-        achievementsData.map(ach => ach.id === formState.id ? { ...ach, ...updatedAchievement } : ach )
-      );
-      alert('Achievement updated successfully!');
-    } else {
-      const newAchievement = {
-        ...formState,
-        id: achievementsData.length > 0 ? Math.max(...achievementsData.map(a => a.id)) + 1 : 1,
-        image: formState.imagePreview || 'https://via.placeholder.com/400x300.png?text=Achievement',
-      };
-      setAchievementsData([...achievementsData, newAchievement]);
-      alert('New achievement added successfully!');
+      if (isEditing) {
+        await achievementService.updateAchievement(formState.id, formData);
+        alert('Achievement updated successfully!');
+      } else {
+        await achievementService.createAchievement(formData);
+        alert('New achievement added successfully!');
+      }
+      
+      resetForm();
+      fetchAchievements(); // Refresh the list
+    } catch (error) {
+      console.error('Error saving achievement:', error);
+      alert('Failed to save achievement');
     }
-    resetForm();
   };
 
   const handleEdit = (achievement) => {
@@ -87,17 +113,23 @@ const Achievement= () => {
     setIsEditing(true);
     setFormState({
       ...achievement,
-      imagePreview: achievement.image, // Set preview to the existing image
-      image: null, // Clear the file input
+      imagePreview: achievement.image,
+      image: null,
     });
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this achievement?')) {
-      setAchievementsData(achievementsData.filter(ach => ach.id !== id));
-      alert('Achievement deleted successfully!');
-      if (isEditing && formState.id === id) {
-        resetForm();
+      try {
+        await achievementService.deleteAchievement(id);
+        alert('Achievement deleted successfully!');
+        fetchAchievements(); // Refresh the list
+        if (isEditing && formState.id === id) {
+          resetForm();
+        }
+      } catch (error) {
+        console.error('Error deleting achievement:', error);
+        alert('Failed to delete achievement');
       }
     }
   };
@@ -115,17 +147,23 @@ const Achievement= () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Welcome to Achievement Management</h1>
 
-     
       <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md mb-8 max-w-4xl mx-auto">
         <h2 className="text-xl font-semibold text-gray-700 mb-4">
           {isEditing ? 'Edit Achievement' : 'Add New Achievement'}
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
-          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Title</label>
@@ -172,13 +210,11 @@ const Achievement= () => {
             )}
           </div>
           
-          
           <div className="flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-2">
             {isEditing && (
               <button 
                 type="button" 
                 onClick={resetForm} 
-                
                 className="w-full sm:w-auto px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
               >
                 Cancel
@@ -186,7 +222,6 @@ const Achievement= () => {
             )}
             <button 
               type="submit" 
-              
               className="w-full sm:w-auto px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
             >
               {isEditing ? 'Update' : 'Save'}
@@ -195,11 +230,9 @@ const Achievement= () => {
         </form>
       </div>
 
-     
       <div className="mt-10">
         <h2 className="text-xl font-semibold text-gray-700 mb-4">Achievement List</h2>
         
-       
         <div className="space-y-4 md:hidden">
           {achievementsData.map(ach => (
             <div key={ach.id} className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -224,41 +257,41 @@ const Achievement= () => {
         </div>
         
         <div className="hidden md:block overflow-x-auto bg-white rounded-lg shadow-md">
-            <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                    <tr>
-                        <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
-                        <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                        <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                        <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                        <th className="px-4 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                    {achievementsData.map(ach => (
-                        <tr key={ach.id} className="hover:bg-gray-50">
-                            <td className="px-4 sm:px-6 py-4">
-                                <img src={ach.image} alt={ach.title} className="w-20 h-16 object-cover rounded-md shadow-sm" />
-                            </td>
-                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{ach.title}</td>
-                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{ach.student}</td>
-                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm">
-                                <span className={`px-3 py-1 rounded-full font-semibold text-xs capitalize ${getCategoryBadge(ach.category)}`}>
-                                  {ach.category}
-                                </span>
-                            </td>
-                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-center space-x-4">
-                                <button onClick={() => handleEdit(ach)} className="text-indigo-600 hover:text-indigo-900" title="Edit">
-                                  <Edit size={18} />
-                                </button>
-                                <button onClick={() => handleDelete(ach.id)} className="text-red-600 hover:text-red-900" title="Delete">
-                                  <Trash2 size={18} />
-                                </button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                <th className="px-4 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {achievementsData.map(ach => (
+                <tr key={ach.id} className="hover:bg-gray-50">
+                  <td className="px-4 sm:px-6 py-4">
+                    <img src={ach.image} alt={ach.title} className="w-20 h-16 object-cover rounded-md shadow-sm" />
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{ach.title}</td>
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{ach.student}</td>
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm">
+                    <span className={`px-3 py-1 rounded-full font-semibold text-xs capitalize ${getCategoryBadge(ach.category)}`}>
+                      {ach.category}
+                    </span>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-center space-x-4">
+                    <button onClick={() => handleEdit(ach)} className="text-indigo-600 hover:text-indigo-900" title="Edit">
+                      <Edit size={18} />
+                    </button>
+                    <button onClick={() => handleDelete(ach.id)} className="text-red-600 hover:text-red-900" title="Delete">
+                      <Trash2 size={18} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

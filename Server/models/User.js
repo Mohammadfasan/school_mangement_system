@@ -21,17 +21,33 @@ const userSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
     trim: true,
-    match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email']
+    validate: {
+      validator: function(email) {
+        return /^\S+@\S+\.\S+$/.test(email);
+      },
+      message: 'Please enter a valid email'
+    }
   },
   phone: {
     type: String,
     required: [true, 'Phone number is required'],
-    match: [/^\+?[0-9]{10,15}$/, 'Please enter a valid phone number']
+    validate: {
+      validator: function(phone) {
+        return /^\+?[\d\s\-\(\)]{10,15}$/.test(phone.replace(/\s/g, ''));
+      },
+      message: 'Please enter a valid phone number'
+    }
   },
   password: {
     type: String,
     required: [true, 'Password is required'],
-    minlength: [8, 'Password must be at least 8 characters long']
+    minlength: [8, 'Password must be at least 8 characters long'],
+    validate: {
+      validator: function(password) {
+        return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password);
+      },
+      message: 'Password must include uppercase, lowercase, number and special character'
+    }
   },
   role: {
     type: String,

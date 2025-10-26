@@ -1,48 +1,57 @@
+// controllers/eventControllers.js
 const Event = require('../models/Event');
+const path = require('path');
+const fs = require('fs');
+
+// Helper function to handle base64 image
+const saveBase64Image = (base64String, eventId) => {
+  if (!base64String) return '';
+  
+  try {
+    // Check if it's a base64 string or already a URL
+    if (base64String.startsWith('data:image/')) {
+      const matches = base64String.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
+      if (!matches || matches.length !== 3) {
+        return '';
+      }
+      
+      const imageType = matches[1];
+      const imageData = matches[2];
+      const buffer = Buffer.from(imageData, 'base64');
+      
+      // Create uploads directory if it doesn't exist
+      const uploadDir = 'uploads/events';
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      
+      const filename = `event-${eventId || Date.now()}-${Math.random().toString(36).substring(7)}.${imageType.split('/')[1] || 'png'}`;
+      const filepath = path.join(uploadDir, filename);
+      
+      fs.writeFileSync(filepath, buffer);
+      return `/uploads/events/${filename}`;
+    }
+    
+    // If it's already a URL, return as is
+    return base64String;
+  } catch (error) {
+    console.error('Error saving base64 image:', error);
+    return '';
+  }
+};
 
 // @desc    Get all events
 // @route   GET /api/events
 // @access  Public
 exports.getAllEvents = async (req, res) => {
   try {
-    const { category, status, page = 1, limit = 10, search } = req.query;
-    
-    let query = {};
-    
-    // Filter by category if provided
-    if (category && category !== 'all') {
-      query.category = category;
-    }
-    
-    // Filter by status if provided
-    if (status && status !== 'all') {
-      query.status = status;
-    }
-    
-    // Search functionality
-    if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { student: { $regex: search, $options: 'i' } },
-        { award: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
-      ];
-    }
-    
-    const events = await Event.find(query)
+    const events = await Event.find({})
       .populate('createdBy', 'name email')
-      .sort({ date: 1, createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-    
-    const total = await Event.countDocuments(query);
+      .sort({ date: 1, createdAt: -1 });
     
     res.status(200).json({
       success: true,
       count: events.length,
-      total,
-      page: parseInt(page),
-      pages: Math.ceil(total / limit),
       data: events
     });
   } catch (error) {
@@ -82,7 +91,7 @@ exports.getEventById = async (req, res) => {
 };
 
 // @desc    Create new event
-// @route   POST /api/events
+// @route   POST /api/events/create-event
 // @access  Private/Admin
 exports.createEvent = async (req, res) => {
   try {
@@ -98,12 +107,12 @@ exports.createEvent = async (req, res) => {
       status,
       audience,
       organizer,
-      days_left
+      time
     } = req.body;
     
-    // Calculate days_left if not provided
-    let calculatedDaysLeft = days_left;
-    if (!days_left && date) {
+    // Calculate days_left
+    let calculatedDaysLeft = 0;
+    if (date) {
       const eventDate = new Date(date);
       const today = new Date();
       const diffTime = eventDate - today;
@@ -111,7 +120,8 @@ exports.createEvent = async (req, res) => {
       calculatedDaysLeft = calculatedDaysLeft > 0 ? calculatedDaysLeft : 0;
     }
     
-    const event = await Event.create({
+    // Create event first to get ID for image naming
+    const eventData = {
       title,
       student,
       award,
@@ -119,13 +129,24 @@ exports.createEvent = async (req, res) => {
       date: new Date(date),
       venue,
       description: description || '',
-      image: image || '',
       status: status || 'upcoming',
       audience: audience || 'All Students',
       organizer: organizer || 'School Administration',
-      days_left: calculatedDaysLeft || 0,
+      time: time || '',
+      days_left: calculatedDaysLeft,
       createdBy: req.user.userId
-    });
+    };
+    
+    const event = await Event.create(eventData);
+    
+    // Handle image after event creation to use event ID
+    if (image) {
+      const imagePath = saveBase64Image(image, event._id);
+      if (imagePath) {
+        event.image = imagePath;
+        await event.save();
+      }
+    }
     
     await event.populate('createdBy', 'name email');
     
@@ -153,7 +174,7 @@ exports.createEvent = async (req, res) => {
 };
 
 // @desc    Update event
-// @route   PUT /api/events/:id
+// @route   PUT /api/events/update-event/:id
 // @access  Private/Admin
 exports.updateEvent = async (req, res) => {
   try {
@@ -166,28 +187,55 @@ exports.updateEvent = async (req, res) => {
       });
     }
     
+    const {
+      title,
+      student,
+      award,
+      category,
+      date,
+      venue,
+      description,
+      image,
+      status,
+      audience,
+      organizer,
+      time
+    } = req.body;
+    
     // Calculate days_left if date is being updated
-    if (req.body.date && !req.body.days_left) {
-      const eventDate = new Date(req.body.date);
+    let calculatedDaysLeft = event.days_left;
+    if (date && !req.body.days_left) {
+      const eventDate = new Date(date);
       const today = new Date();
       const diffTime = eventDate - today;
-      req.body.days_left = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      req.body.days_left = req.body.days_left > 0 ? req.body.days_left : 0;
+      calculatedDaysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      calculatedDaysLeft = calculatedDaysLeft > 0 ? calculatedDaysLeft : 0;
     }
     
-    // Convert date string to Date object if provided
-    if (req.body.date) {
-      req.body.date = new Date(req.body.date);
-    }
+    // Update event data
+    event.title = title || event.title;
+    event.student = student || event.student;
+    event.award = award || event.award;
+    event.category = category || event.category;
+    event.date = date ? new Date(date) : event.date;
+    event.venue = venue || event.venue;
+    event.description = description || event.description;
+    event.status = status || event.status;
+    event.audience = audience || event.audience;
+    event.organizer = organizer || event.organizer;
+    event.time = time || event.time;
+    event.days_left = calculatedDaysLeft;
     
-    event = await Event.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      {
-        new: true,
-        runValidators: true
+    // Handle image update
+    if (image && image !== event.image) {
+      const imagePath = saveBase64Image(image, event._id);
+      if (imagePath) {
+        event.image = imagePath;
       }
-    ).populate('createdBy', 'name email');
+    }
+    
+    await event.save();
+    await event.populate('createdBy', 'name email');
     
     res.status(200).json({
       success: true,
@@ -213,7 +261,7 @@ exports.updateEvent = async (req, res) => {
 };
 
 // @desc    Delete event
-// @route   DELETE /api/events/:id
+// @route   DELETE /api/events/delete-event/:id
 // @access  Private/Admin
 exports.deleteEvent = async (req, res) => {
   try {
@@ -248,7 +296,6 @@ exports.deleteEvent = async (req, res) => {
 exports.getEventsByStatus = async (req, res) => {
   try {
     const { status } = req.params;
-    const { page = 1, limit = 10 } = req.query;
     
     const validStatuses = ['upcoming', 'completed', 'canceled'];
     if (!validStatuses.includes(status)) {
@@ -260,18 +307,11 @@ exports.getEventsByStatus = async (req, res) => {
     
     const events = await Event.find({ status })
       .populate('createdBy', 'name email')
-      .sort({ date: 1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-    
-    const total = await Event.countDocuments({ status });
+      .sort({ date: 1 });
     
     res.status(200).json({
       success: true,
       count: events.length,
-      total,
-      page: parseInt(page),
-      pages: Math.ceil(total / limit),
       data: events
     });
   } catch (error) {
@@ -289,22 +329,14 @@ exports.getEventsByStatus = async (req, res) => {
 exports.getEventsByCategory = async (req, res) => {
   try {
     const { category } = req.params;
-    const { page = 1, limit = 10 } = req.query;
     
     const events = await Event.find({ category })
       .populate('createdBy', 'name email')
-      .sort({ date: 1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-    
-    const total = await Event.countDocuments({ category });
+      .sort({ date: 1 });
     
     res.status(200).json({
       success: true,
       count: events.length,
-      total,
-      page: parseInt(page),
-      pages: Math.ceil(total / limit),
       data: events
     });
   } catch (error) {

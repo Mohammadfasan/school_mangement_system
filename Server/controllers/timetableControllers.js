@@ -255,6 +255,127 @@ const clearTimetableSlot = async (req, res) => {
   }
 };
 
+// Create default grades
+const createDefaultGrades = async (req, res) => {
+  try {
+    const defaultGrades = [
+      {
+        grade: '1',
+        hallNo: 'A101',
+        room: 'Room 1',
+        timetable: [
+          { period: '1', monday: { subject: 'Math', color: 'bg-blue-100' }, tuesday: { subject: 'English', color: 'bg-green-100' }, wednesday: { subject: 'Science', color: 'bg-yellow-100' }, thursday: { subject: 'Math', color: 'bg-blue-100' }, friday: { subject: 'Art', color: 'bg-purple-100' } },
+          { period: '2', monday: { subject: 'English', color: 'bg-green-100' }, tuesday: { subject: 'Science', color: 'bg-yellow-100' }, wednesday: { subject: 'Math', color: 'bg-blue-100' }, thursday: { subject: 'PE', color: 'bg-red-100' }, friday: { subject: 'Music', color: 'bg-pink-100' } },
+          { period: '3', monday: { subject: 'Science', color: 'bg-yellow-100' }, tuesday: { subject: 'Math', color: 'bg-blue-100' }, wednesday: { subject: 'English', color: 'bg-green-100' }, thursday: { subject: 'Science', color: 'bg-yellow-100' }, friday: { subject: 'Math', color: 'bg-blue-100' } },
+          { period: '4', monday: { subject: 'PE', color: 'bg-red-100' }, tuesday: { subject: 'Art', color: 'bg-purple-100' }, wednesday: { subject: 'Music', color: 'bg-pink-100' }, thursday: { subject: 'English', color: 'bg-green-100' }, friday: { subject: 'Science', color: 'bg-yellow-100' } }
+        ],
+        interval: [
+          { period: '5', monday: { subject: 'Break', color: 'bg-gray-100' }, tuesday: { subject: 'Break', color: 'bg-gray-100' }, wednesday: { subject: 'Break', color: 'bg-gray-100' }, thursday: { subject: 'Break', color: 'bg-gray-100' }, friday: { subject: 'Break', color: 'bg-gray-100' } },
+          { period: '6', monday: { subject: 'Social Studies', color: 'bg-indigo-100' }, tuesday: { subject: 'Computer', color: 'bg-teal-100' }, wednesday: { subject: 'Social Studies', color: 'bg-indigo-100' }, thursday: { subject: 'Computer', color: 'bg-teal-100' }, friday: { subject: 'Library', color: 'bg-orange-100' } },
+          { period: '7', monday: { subject: 'Computer', color: 'bg-teal-100' }, tuesday: { subject: 'Social Studies', color: 'bg-indigo-100' }, wednesday: { subject: 'Computer', color: 'bg-teal-100' }, thursday: { subject: 'Social Studies', color: 'bg-indigo-100' }, friday: { subject: 'Games', color: 'bg-red-100' } }
+        ]
+      }
+    ];
+
+    // Clear existing grades and create default ones
+    await Grade.deleteMany({});
+    const createdGrades = await Grade.insertMany(defaultGrades);
+
+    res.json({
+      success: true,
+      message: 'Default grades created successfully',
+      data: createdGrades
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error creating default grades',
+      error: error.message
+    });
+  }
+};
+
+// Get timetable statistics
+const getTimetableStats = async (req, res) => {
+  try {
+    const totalGrades = await Grade.countDocuments();
+    const grades = await Grade.find();
+    
+    let totalPeriods = 0;
+    let weeklyClasses = 0;
+    const subjectsSet = new Set();
+
+    grades.forEach(grade => {
+      // Count periods in timetable and interval
+      totalPeriods += (grade.timetable.length + grade.interval.length);
+      
+      // Count weekly classes (non-empty subjects)
+      grade.timetable.forEach(period => {
+        days.forEach(day => {
+          if (period[day]?.subject && period[day].subject.trim() !== '') {
+            weeklyClasses++;
+            subjectsSet.add(period[day].subject);
+          }
+        });
+      });
+      
+      grade.interval.forEach(period => {
+        days.forEach(day => {
+          if (period[day]?.subject && period[day].subject.trim() !== '' && period[day].subject !== 'Break') {
+            weeklyClasses++;
+            subjectsSet.add(period[day].subject);
+          }
+        });
+      });
+    });
+
+    res.json({
+      success: true,
+      data: {
+        totalGrades,
+        totalPeriods,
+        weeklyClasses,
+        totalSubjects: subjectsSet.size
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching statistics',
+      error: error.message
+    });
+  }
+};
+
+// Delete grade
+const deleteGrade = async (req, res) => {
+  try {
+    const { grade } = req.params;
+    
+    const deletedGrade = await Grade.findOneAndDelete({ grade });
+    
+    if (!deletedGrade) {
+      return res.status(404).json({
+        success: false,
+        message: 'Grade not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Grade timetable deleted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting grade',
+      error: error.message
+    });
+  }
+};
+
+const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+
 module.exports = {
   getAllGrades,
   getGradeTimetable,
@@ -262,5 +383,8 @@ module.exports = {
   createGrade,
   getAllSubjects,
   createSubject,
-  clearTimetableSlot
+  clearTimetableSlot,
+  createDefaultGrades,
+  getTimetableStats,
+  deleteGrade
 };

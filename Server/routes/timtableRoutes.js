@@ -7,10 +7,13 @@ const {
   createGrade,
   getAllSubjects,
   createSubject,
-  clearTimetableSlot
-} = require('../controllers/timetableControllers.js');
-const { protect } = require('../middleware/auth.js');
-const { isAdmin } = require('../middleware/roleMiddleware.js');
+  clearTimetableSlot,
+  createDefaultGrades,
+  getTimetableStats,
+  deleteGrade
+} = require('../controllers/timetableControllers');
+const { protect } = require('../middleware/auth');
+const { isAdmin } = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
@@ -24,5 +27,8 @@ router.post('/clear-slot', protect, isAdmin, clearTimetableSlot);
 router.post('/create-grade', protect, isAdmin, createGrade);
 router.get('/subjects', protect, isAdmin, getAllSubjects);
 router.post('/create-subject', protect, isAdmin, createSubject);
+router.post('/create-default-grades', createDefaultGrades);
+router.get('/stats', protect, isAdmin, getTimetableStats);
+router.delete('/grade/:grade', protect, isAdmin, deleteGrade);
 
 module.exports = router;

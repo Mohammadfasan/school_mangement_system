@@ -21,7 +21,7 @@ router.get('/category/:category', getAchievementsByCategory);
 router.get('/highlighted/all', getHighlightedAchievements);
 router.get('/:id', getAchievementById);
 
-// Protected routes (Admin only)
+// Protected admin routes
 router.use(protect);
 router.post('/create-achievement', authorize('admin'), createAchievement);
 router.put('/update-achievement/:id', authorize('admin'), updateAchievement);
