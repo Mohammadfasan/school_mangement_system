@@ -19,10 +19,12 @@ const navItems = [
 const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
   const darkGreen = '#059669';   
   const activeGreen = '#5dc252'; 
-  const sidebarWidth = '280px';
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+
+  // Debug user data
+  console.log('Sidebar User Data:', user);
 
   const handleLogout = () => {
     logout();
@@ -30,15 +32,28 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
     if (isSidebarOpen) toggleSidebar();
   };
 
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (!user) return 'Admin User';
+    return user.name || user.username || user.fullName || user.email || 'Admin User';
+  };
+
+  // Get user role
+  const getUserRole = () => {
+    if (!user) return 'Administrator';
+    const role = user.role || user.userType || user.roleType;
+    return role ? role.charAt(0).toUpperCase() + role.slice(1) : 'Administrator';
+  };
+
   return (
     <>
       <aside 
-        style={{ backgroundColor: darkGreen, width: sidebarWidth }} 
+        style={{ backgroundColor: darkGreen }} 
         className={`
           h-screen fixed top-0 left-0 text-white shadow-xl flex flex-col pt-4 overflow-y-auto z-50
-          transform -translate-x-full md:translate-x-0 
-          transition-transform duration-300 ease-in-out
+          transition-transform duration-300 ease-in-out w-72
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          md:translate-x-0
         `}
       >
         
@@ -76,8 +91,12 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
               className="w-24 h-24 rounded-full border-4 border-white object-cover"
             />
           </div>
-          <h3 className="text-white font-semibold text-lg">{user?.name || 'Admin User'}</h3>
-          <p className="text-white/80 text-sm">Administrator</p>
+          <h3 className="text-white font-semibold text-lg text-center">
+            {getUserDisplayName()}
+          </h3>
+          <p className="text-white/80 text-sm capitalize">
+            {getUserRole()}
+          </p>
         </div>
         
         <nav className="flex-grow space-y-2 mt-4">

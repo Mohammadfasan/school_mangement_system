@@ -9,8 +9,28 @@ export const achievementService = {
   getAchievementById: (id) => api.get(`/api/achievements/${id}`),
   
   // Admin routes
-  createAchievement: (data) => api.post('/api/achievements/create-achievement', data),
-  updateAchievement: (id, data) => api.put(`/api/achievements/update-achievement/${id}`, data),
+  createAchievement: (data, config = {}) => {
+    const finalConfig = {
+      ...config,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        ...config.headers,
+      },
+    };
+    return api.post('/api/achievements/create-achievement', data, finalConfig);
+  },
+  
+  updateAchievement: (id, data, config = {}) => {
+    const finalConfig = {
+      ...config,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        ...config.headers,
+      },
+    };
+    return api.put(`/api/achievements/update-achievement/${id}`, data, finalConfig);
+  },
+  
   deleteAchievement: (id) => api.delete(`/api/achievements/delete-achievement/${id}`),
   getAchievementStats: () => api.get('/api/achievements/stats/overview'),
 };

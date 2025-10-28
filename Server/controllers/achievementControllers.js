@@ -1,12 +1,65 @@
 // controllers/achievementControllers.js
 const Achievement = require('../models/Achievement');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Ensure uploads directory exists
+const uploadsDir = 'uploads/achievements';
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadsDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'achievement-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: function (req, file, cb) {
+    const filetypes = /jpeg|jpg|png|gif|webp/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = filetypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only image files (JPEG, JPG, PNG, GIF, WebP) are allowed'));
+    }
+  }
+}).single('image');
+
+// Helper function to handle file upload
+const handleFileUpload = (req, res) => {
+  return new Promise((resolve, reject) => {
+    upload(req, res, function (err) {
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          reject(new Error('File size too large. Maximum size is 10MB.'));
+        } else {
+          reject(err);
+        }
+      } else {
+        resolve();
+      }
+    });
+  });
+};
 
 // @desc    Get all achievements
 // @route   GET /api/achievements
 // @access  Public
 exports.getAllAchievements = async (req, res) => {
   try {
-    const { category, highlight, page = 1, limit = 10 } = req.query;
+    const { category, highlight, page = 1, limit = 100 } = req.query;
     
     let query = {};
     
@@ -84,21 +137,17 @@ exports.getAchievementById = async (req, res) => {
 // @access  Private/Admin
 exports.createAchievement = async (req, res) => {
   try {
+    // Handle file upload first
+    await handleFileUpload(req, res);
+    
     console.log('Request body:', req.body);
+    console.log('Uploaded file:', req.file);
     
     // Safety check: ensure the user ID is present
     if (!req.user || !req.user.userId) {
       return res.status(401).json({
         success: false,
         message: 'Not authorized, user ID not found'
-      });
-    }
-
-    // Check if request body exists
-    if (!req.body || Object.keys(req.body).length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Request body is empty'
       });
     }
 
@@ -111,15 +160,14 @@ exports.createAchievement = async (req, res) => {
       date,
       venue,
       description,
-      image,
       highlight
     } = req.body;
     
     // Check required fields
-    if (!title || !student || !grade || !award || !category || !date || !venue) {
+    if (!title || !student || !award || !category || !date) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: title, student, grade, award, category, date, venue'
+        message: 'Missing required fields: title, student, award, category, date'
       });
     }
     
@@ -137,17 +185,23 @@ exports.createAchievement = async (req, res) => {
       });
     }
     
+    // Handle image path
+    let imagePath = '/uploads/achievements/default-achievement.jpg';
+    if (req.file) {
+      imagePath = `/uploads/achievements/${req.file.filename}`;
+    }
+    
     const achievement = new Achievement({
       title,
       student,
-      grade,
+      grade: grade || 'N/A',
       award,
       category,
       date,
-      venue,
+      venue: venue || 'N/A',
       description: description || '',
-      image: image || 'https://via.placeholder.com/400x300.png?text=Achievement',
-      highlight: highlight || false,
+      image: imagePath,
+      highlight: highlight === 'true' || false,
       createdBy: req.user.userId
     });
     
@@ -160,6 +214,22 @@ exports.createAchievement = async (req, res) => {
     });
   } catch (error) {
     console.error('Create achievement error:', error);
+    
+    // Handle file upload errors
+    if (error.message.includes('File size too large')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
+    if (error.message.includes('Only image files')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(val => val.message);
       return res.status(400).json({
@@ -167,6 +237,7 @@ exports.createAchievement = async (req, res) => {
         message: messages.join(', ')
       });
     }
+    
     res.status(500).json({
       success: false,
       message: 'Server error while creating achievement'
@@ -179,8 +250,12 @@ exports.createAchievement = async (req, res) => {
 // @access  Private/Admin
 exports.updateAchievement = async (req, res) => {
   try {
+    // Handle file upload first
+    await handleFileUpload(req, res);
+    
     console.log('Update request body:', req.body);
     console.log('Update ID:', req.params.id);
+    console.log('Uploaded file:', req.file);
     
     const {
       title,
@@ -191,7 +266,6 @@ exports.updateAchievement = async (req, res) => {
       date,
       venue,
       description,
-      image,
       highlight
     } = req.body;
     
@@ -219,21 +293,28 @@ exports.updateAchievement = async (req, res) => {
       });
     }
     
+    // Prepare update data
+    const updateData = {
+      title,
+      student,
+      grade: grade || 'N/A',
+      award,
+      category,
+      date,
+      venue: venue || 'N/A',
+      description: description || '',
+      highlight: highlight === 'true' || false,
+      updatedAt: Date.now()
+    };
+    
+    // Update image only if a new file was uploaded
+    if (req.file) {
+      updateData.image = `/uploads/achievements/${req.file.filename}`;
+    }
+    
     achievement = await Achievement.findByIdAndUpdate(
       req.params.id,
-      {
-        title,
-        student,
-        grade,
-        award,
-        category,
-        date,
-        venue,
-        description: description || '',
-        image: image || 'https://via.placeholder.com/400x300.png?text=Achievement',
-        highlight: highlight || false,
-        updatedAt: Date.now()
-      },
+      updateData,
       {
         new: true,
         runValidators: true
@@ -247,6 +328,22 @@ exports.updateAchievement = async (req, res) => {
     });
   } catch (error) {
     console.error('Update achievement error:', error);
+    
+    // Handle file upload errors
+    if (error.message.includes('File size too large')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
+    if (error.message.includes('Only image files')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(val => val.message);
       return res.status(400).json({
@@ -254,12 +351,14 @@ exports.updateAchievement = async (req, res) => {
         message: messages.join(', ')
       });
     }
+    
     if (error.name === 'CastError') {
       return res.status(400).json({
         success: false,
         message: 'Invalid achievement ID'
       });
     }
+    
     res.status(500).json({
       success: false,
       message: 'Server error while updating achievement'
@@ -309,7 +408,7 @@ exports.deleteAchievement = async (req, res) => {
 exports.getAchievementsByCategory = async (req, res) => {
   try {
     const { category } = req.params;
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 100 } = req.query;
     
     const achievements = await Achievement.find({ category })
       .sort({ date: -1 })

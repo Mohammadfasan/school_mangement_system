@@ -13,20 +13,23 @@ const Layout = () => {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Sidebar with state */}
       <AdminSidebar 
         isSidebarOpen={isSidebarOpen} 
         toggleSidebar={toggleSidebar} 
       />
       
-      <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Navbar with toggle function */}
-        <AdminNavbar toggleSidebar={toggleSidebar} />
+      
+      <div className="flex flex-col flex-1 w-full overflow-hidden md:ml-72">
+        
+        <header className="h-16 bg-white shadow-md z-10">
+          <AdminNavbar toggleSidebar={toggleSidebar} />
+        </header>
 
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6">
           <Outlet /> 
         </main>
       </div>
+
     </div>
   );
 };

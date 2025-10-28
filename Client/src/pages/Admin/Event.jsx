@@ -6,6 +6,7 @@ import { Edit, Trash2 } from 'lucide-react';
 const Event = () => {
   const [eventsData, setEventsData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
   
   const [formState, setFormState] = useState({
     id: null,
@@ -19,7 +20,8 @@ const Event = () => {
     status: 'upcoming',
     time: '',
     image: null,
-    imagePreview: '', 
+    imagePreview: '',
+    imageFile: null,
   });
 
   const [isEditing, setIsEditing] = useState(false);
@@ -50,14 +52,41 @@ const Event = () => {
   const handleImageChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size should be less than 5MB. Please choose a smaller image.');
+        e.target.value = ''; // Clear the file input
+        return;
+      }
+      
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        alert('Please select a valid image file (JPEG, PNG, GIF, WebP).');
+        e.target.value = '';
+        return;
+      }
+      
       const reader = new FileReader();
       
+      reader.onloadstart = () => {
+        console.log('Starting to read image file...');
+      };
+      
       reader.onloadend = () => {
+        console.log('Image file read completed, size:', reader.result.length, 'bytes');
         setFormState(prevState => ({
           ...prevState,
           image: reader.result, // base64 string
           imagePreview: reader.result,
+          imageFile: file,
         }));
+      };
+      
+      reader.onerror = () => {
+        console.error('Error reading image file');
+        alert('Error reading image file. Please try again.');
       };
       
       reader.readAsDataURL(file);
@@ -79,13 +108,17 @@ const Event = () => {
       time: '',
       image: null,
       imagePreview: '',
+      imageFile: null,
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitLoading(true);
 
     try {
+      console.log('Submitting event form...');
+      
       const eventData = {
         title: formState.title,
         student: formState.student,
@@ -99,19 +132,29 @@ const Event = () => {
         image: formState.image,
       };
 
+      console.log('Event data prepared, image size:', eventData.image ? eventData.image.length : 0, 'bytes');
+
+      let response;
       if (isEditing) {
-        await eventService.updateEvent(formState.id, eventData);
+        response = await eventService.updateEvent(formState.id, eventData);
         alert('Event updated successfully!');
       } else {
-        await eventService.createEvent(eventData);
+        response = await eventService.createEvent(eventData);
         alert('New event added successfully!');
       }
       
+      console.log('Event saved successfully:', response.data);
       resetForm();
       fetchEvents(); // Refresh the list
     } catch (error) {
       console.error('Error saving event:', error);
-      alert('Failed to save event: ' + (error.response?.data?.message || error.message));
+      if (error.response?.status === 413) {
+        alert('Image file is too large even after compression. Please choose a smaller image (under 2MB).');
+      } else {
+        alert('Failed to save event: ' + (error.response?.data?.message || error.message));
+      }
+    } finally {
+      setSubmitLoading(false);
     }
   };
 
@@ -131,6 +174,7 @@ const Event = () => {
       time: event.time,
       image: event.image,
       imagePreview: event.image,
+      imageFile: null,
     });
   };
 
@@ -313,11 +357,16 @@ const Event = () => {
                 type="file" 
                 name="image" 
                 id="image" 
-                accept="image/*"
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                 onChange={handleImageChange} 
                 className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100" 
               />
-              <p className="text-xs text-gray-500 mt-1">Supported formats: JPG, PNG, GIF. Max size: 5MB</p>
+              <p className="text-xs text-gray-500 mt-1">Supported formats: JPG, PNG, GIF, WebP. Max size: 5MB</p>
+              {formState.imageFile && (
+                <p className="text-xs text-green-600 mt-1">
+                  Selected: {formState.imageFile.name} ({(formState.imageFile.size / 1024 / 1024).toFixed(2)} MB)
+                </p>
+              )}
             </div>
             {formState.imagePreview && (
               <div className="md:col-span-2">
@@ -328,6 +377,9 @@ const Event = () => {
                     alt="Preview" 
                     className="w-full max-w-xs h-48 object-cover rounded-lg shadow-sm mx-auto" 
                   />
+                  <p className="text-xs text-center text-gray-500 mt-2">
+                    Preview - Image will be compressed automatically
+                  </p>
                 </div>
               </div>
             )}
@@ -337,21 +389,31 @@ const Event = () => {
               <button 
                 type="button" 
                 onClick={resetForm} 
-                className="w-full sm:w-auto px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition duration-200 font-medium"
+                disabled={submitLoading}
+                className="w-full sm:w-auto px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition duration-200 font-medium disabled:opacity-50"
               >
                 Cancel Edit
               </button>
             )}
             <button 
               type="submit" 
-              className="w-full sm:w-auto px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200 font-medium"
+              disabled={submitLoading}
+              className="w-full sm:w-auto px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200 font-medium disabled:opacity-50 flex items-center justify-center"
             >
-              {isEditing ? 'Update Event' : 'Create Event'}
+              {submitLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  {isEditing ? 'Updating...' : 'Creating...'}
+                </>
+              ) : (
+                isEditing ? 'Update Event' : 'Create Event'
+              )}
             </button>
           </div>
         </form>
       </div>
 
+      {/* Events List Table - Same as before */}
       <div className="mt-10">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-gray-700">Event List</h2>

@@ -95,7 +95,7 @@ const Event = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-6 pt-20">
       {/* Header */}
-      <div className="text-center mb-8">
+      <div className="text-center mb-8 mt-20">
         <h1 className="text-4xl font-bold text-[#059669] mb-2">Welcome to Events</h1>
         <p className="text-gray-600 text-lg">Stay updated with all school events and activities</p>
       </div>

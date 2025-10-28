@@ -23,14 +23,18 @@ const Navbar_adi = ({ toggleSidebar }) => {
     
     // Find the best matching route
     const matchingKey = Object.keys(titleMap)
-      .sort((a, b) => b.length - a.length)
+      .sort((a, b) => b.length - a.length) // Sort by length descending
       .find(key => path.startsWith(key));
     
     return titleMap[matchingKey] || 'Dashboard';
   };
 
   return (
+    // === UPDATE START ===
+    // Change "h-16" back to "h-full".
+    // This makes it fill the new <header> tag from Layout.jsx.
     <div className="h-full">
+    {/* === UPDATE END === */}
       <div className="flex items-center justify-between px-6 h-full">
         <div className="flex items-center space-x-4">
           
@@ -53,8 +57,8 @@ const Navbar_adi = ({ toggleSidebar }) => {
             <BiSolidCircle className="absolute -top-1 -right-1 text-red-500 text-xs" />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-gray-800">{user?.name || 'Admin User'}</span>
-            <span className="text-xs text-gray-500 hidden sm:block">Administrator</span>
+            <span className="text-sm font-semibold text-gray-800">{user?.name || 'Admin'}</span>
+            <span className="text-xs text-gray-500">{user?.role || 'administrator'}</span>
           </div>
         </div>
       </div>

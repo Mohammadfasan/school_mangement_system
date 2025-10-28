@@ -22,7 +22,6 @@ const Timetable = () => {
   const dayHeaders = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   const fullDayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-  // Fetch grades from backend
   useEffect(() => {
     fetchGrades();
   }, []);
@@ -33,17 +32,60 @@ const Timetable = () => {
     }
   }, [selectedGrade]);
 
+  // UPDATED FETCH GRADES FUNCTION
   const fetchGrades = async () => {
     try {
       setLoading(true);
       const response = await timetableService.getAllGrades();
-      setGradesData(response.data.grades || response.data);
-      if (response.data.grades?.length > 0 || response.data.length > 0) {
-        setSelectedGrade(response.data.grades?.[0] || response.data[0]);
+      console.log('📊 Public Timetable - Full API response:', response);
+      
+      // Handle ALL possible response structures
+      let fetchedGrades = [];
+      
+      // Case 1: { data: { success: true, data: { grades: [...] } } }
+      if (response.data?.success && response.data.data?.grades) {
+        fetchedGrades = response.data.data.grades;
       }
+      // Case 2: { data: { grades: [...] } }
+      else if (Array.isArray(response.data?.grades)) {
+        fetchedGrades = response.data.grades;
+      }
+      // Case 3: { data: { data: { grades: [...] } } }
+      else if (Array.isArray(response.data?.data?.grades)) {
+        fetchedGrades = response.data.data.grades;
+      }
+      // Case 4: { data: [...] } (direct array)
+      else if (Array.isArray(response.data)) {
+        fetchedGrades = response.data;
+      }
+      // Case 5: { data: { data: [...] } } (nested array)
+      else if (Array.isArray(response.data?.data)) {
+        fetchedGrades = response.data.data;
+      }
+      // Case 6: Fallback - empty array
+      else {
+        console.warn('⚠️ Unknown response structure:', response);
+        fetchedGrades = [];
+      }
+      
+      console.log('✅ Public Timetable - Final grades:', fetchedGrades);
+      
+      setGradesData(fetchedGrades);
+      
+      // Select first grade if available
+      if (fetchedGrades.length > 0) {
+        setSelectedGrade(fetchedGrades[0]);
+        console.log('🎯 Selected grade:', fetchedGrades[0]);
+      } else {
+        setSelectedGrade(null);
+        console.log('❌ No grades found');
+      }
+      
     } catch (error) {
-      console.error('Error fetching grades:', error);
+      console.error('❌ Public Timetable - Error fetching grades:', error);
       alert('Failed to fetch timetable data');
+      setGradesData([]);
+      setSelectedGrade(null);
     } finally {
       setLoading(false);
     }
@@ -124,7 +166,6 @@ const Timetable = () => {
     }
   };
 
-  // Mobile view - vertical layout
   const renderMobileTable = (data, title) => (
     <div className="mb-8 mt-6 lg:hidden">
       <h3 className="text-lg font-semibold mb-4 text-gray-700">{title}</h3>
@@ -160,7 +201,6 @@ const Timetable = () => {
     </div>
   );
 
-  // Desktop view - horizontal table
   const renderDesktopTable = (data, title) => (
     <div className="mb-8 mt-6 hidden lg:block">
       <h3 className="text-xl font-semibold mb-4 text-gray-700">{title}</h3>
@@ -211,7 +251,6 @@ const Timetable = () => {
     </div>
   );
 
-  // Admin Mobile Card View
   const renderAdminMobileView = () => (
     <div className="md:hidden space-y-3 mb-6">
       <div className="flex space-x-1 rounded-lg bg-gray-100 p-1">
@@ -269,8 +308,8 @@ const Timetable = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header Section - Always Show This */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+        <div className="text-center mt-40">
+          <h1 className="text-3xl sm:text-4xl font-bold text-[#059669] mb-4">
             School Timetable
           </h1>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
@@ -279,6 +318,8 @@ const Timetable = () => {
           </p>
         </div>
       </div>
+
+    
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -303,8 +344,7 @@ const Timetable = () => {
           </div>
         )}
 
-        {!selectedGrade ? (
-          // Show when no data is available
+        {gradesData.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
             <div className="max-w-md mx-auto">
               <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -327,9 +367,7 @@ const Timetable = () => {
             </div>
           </div>
         ) : (
-          // Show when data is available
           <>
-            {/* Admin Controls */}
             {isAuthenticated && (
               <div className="bg-white p-6 rounded-lg shadow-md mb-8">
                 <h2 className="text-xl font-semibold text-gray-700 mb-4">Update Timetable Slot</h2>
@@ -420,7 +458,7 @@ const Timetable = () => {
                     key={grade.grade}
                     onClick={() => handleGradeChange(grade)}
                     className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                      selectedGrade.grade === grade.grade
+                      selectedGrade?.grade === grade.grade
                         ? 'bg-green-500 text-white'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
@@ -432,37 +470,39 @@ const Timetable = () => {
             </div>
 
             {/* Timetable Display */}
-            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-800">Grade {selectedGrade.grade}</h2>
-                  <div className="flex flex-wrap gap-4 mt-2">
-                    <p className="text-gray-600">Hall no: {selectedGrade.hallNo}</p>
-                    <p className="text-gray-600">Room: {selectedGrade.room}</p>
+            {selectedGrade && (
+              <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-800">Grade {selectedGrade.grade}</h2>
+                    <div className="flex flex-wrap gap-4 mt-2">
+                      <p className="text-gray-600">Hall no: {selectedGrade.hallNo}</p>
+                      <p className="text-gray-600">Room: {selectedGrade.room}</p>
+                    </div>
                   </div>
                 </div>
+
+                {/* Admin Mobile View */}
+                {isAuthenticated && renderAdminMobileView()}
+
+                {/* Student Mobile Timetable */}
+                {!isAuthenticated && (
+                  <>
+                    {renderMobileTable(selectedGrade.timetable, "Morning Sessions")}
+                    {renderMobileTable(selectedGrade.interval, "Afternoon Sessions")}
+                  </>
+                )}
+
+                {/* Desktop Timetable */}
+                {renderDesktopTable(selectedGrade.timetable, "Morning Sessions")}
+                
+                {/* Interval Section */}
+                <div className="border-t pt-6 mt-6">
+                  <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Interval</h3>
+                  {renderDesktopTable(selectedGrade.interval, "Afternoon Sessions")}
+                </div>
               </div>
-
-              {/* Admin Mobile View */}
-              {isAuthenticated && renderAdminMobileView()}
-
-              {/* Student Mobile Timetable */}
-              {!isAuthenticated && (
-                <>
-                  {renderMobileTable(selectedGrade.timetable, "Morning Sessions")}
-                  {renderMobileTable(selectedGrade.interval, "Afternoon Sessions")}
-                </>
-              )}
-
-              {/* Desktop Timetable */}
-              {renderDesktopTable(selectedGrade.timetable, "Morning Sessions")}
-              
-              {/* Interval Section */}
-              <div className="border-t pt-6 mt-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Interval</h3>
-                {renderDesktopTable(selectedGrade.interval, "Afternoon Sessions")}
-              </div>
-            </div>
+            )}
           </>
         )}
       </div>

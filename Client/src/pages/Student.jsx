@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { studentService } from '../services/studentService';
-import { Search, Filter, Users, MapPin, Calendar } from 'lucide-react';
+import { Search, Users, User, UserCheck } from 'lucide-react';
 
 const Student = () => {
   const [students, setStudents] = useState([]);
@@ -26,10 +26,31 @@ const Student = () => {
     try {
       setLoading(true);
       const response = await studentService.getAllStudents();
-      setStudents(response.data.students || response.data);
+      
+      let studentsData = [];
+      
+      // Handle different response structures
+      if (response.data) {
+        if (response.data.students && Array.isArray(response.data.students)) {
+          studentsData = response.data.students;
+        }
+        else if (Array.isArray(response.data)) {
+          studentsData = response.data;
+        }
+        else if (response.data.data && response.data.data.students && Array.isArray(response.data.data.students)) {
+          studentsData = response.data.data.students;
+        }
+        else if (response.data.data && Array.isArray(response.data.data)) {
+          studentsData = response.data.data;
+        }
+      }
+      
+      setStudents(studentsData);
+      
     } catch (error) {
-      console.error('Error fetching students:', error);
+      console.error('❌ Error fetching students:', error);
       alert('Failed to fetch students');
+      setStudents([]);
     } finally {
       setLoading(false);
     }
@@ -38,9 +59,22 @@ const Student = () => {
   const fetchStatistics = async () => {
     try {
       const response = await studentService.getStudentStatistics();
-      setStatistics(response.data);
+      
+      let statsData = {};
+      
+      if (response.data) {
+        if (response.data.data) {
+          statsData = response.data.data;
+        } else {
+          statsData = response.data;
+        }
+      }
+
+      setStatistics(statsData);
+      
     } catch (error) {
-      console.error('Error fetching statistics:', error);
+      console.error('❌ Error fetching statistics:', error);
+      setStatistics(null);
     }
   };
 
@@ -54,23 +88,21 @@ const Student = () => {
 
     // Filter by gender
     if (selectedGender !== 'all') {
-      filtered = filtered.filter(student => student.gender === selectedGender);
+      filtered = filtered.filter(student => 
+        student.gender?.toLowerCase() === selectedGender.toLowerCase()
+      );
     }
 
     // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(student =>
-        student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (student.email && student.email.toLowerCase().includes(searchTerm.toLowerCase()))
+        student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (student.parentName && student.parentName.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
     setFilteredStudents(filtered);
-  };
-
-  const getGradeDisplayName = (grade) => {
-    return `Grade ${grade}`;
   };
 
   const getGenderDisplay = (gender) => {
@@ -79,34 +111,50 @@ const Student = () => {
       'female': 'Female',
       'other': 'Other'
     };
-    return genderMap[gender] || gender;
+    return genderMap[gender?.toLowerCase()] || gender || 'Not specified';
   };
 
   const getGenderColor = (gender) => {
+    const genderLower = gender?.toLowerCase();
     const colorMap = {
-      'male': 'bg-blue-100 text-blue-800 border-blue-200',
-      'female': 'bg-pink-100 text-pink-800 border-pink-200',
-      'other': 'bg-purple-100 text-purple-800 border-purple-200'
+      'male': 'bg-blue-100 text-blue-800',
+      'female': 'bg-pink-100 text-pink-800',
+      'other': 'bg-purple-100 text-purple-800'
     };
-    return colorMap[gender] || 'bg-gray-100 text-gray-800 border-gray-200';
+    return colorMap[genderLower] || 'bg-gray-100 text-gray-800';
   };
 
   const getGradeColor = (grade) => {
     const gradeColors = {
-      '1': 'bg-green-100 text-green-800 border-green-200',
-      '2': 'bg-blue-100 text-blue-800 border-blue-200',
-      '3': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      '4': 'bg-red-100 text-red-800 border-red-200',
-      '5': 'bg-purple-100 text-purple-800 border-purple-200',
-      '6': 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      '7': 'bg-pink-100 text-pink-800 border-pink-200',
-      '8': 'bg-orange-100 text-orange-800 border-orange-200',
-      '9': 'bg-teal-100 text-teal-800 border-teal-200',
-      '10': 'bg-cyan-100 text-cyan-800 border-cyan-200',
-      '11': 'bg-lime-100 text-lime-800 border-lime-200',
-      '12': 'bg-amber-100 text-amber-800 border-amber-200'
+      '1': 'bg-green-100 text-green-800',
+      '2': 'bg-blue-100 text-blue-800',
+      '3': 'bg-yellow-100 text-yellow-800',
+      '4': 'bg-red-100 text-red-800',
+      '5': 'bg-purple-100 text-purple-800',
+      '6': 'bg-indigo-100 text-indigo-800',
+      '7': 'bg-pink-100 text-pink-800',
+      '8': 'bg-orange-100 text-orange-800',
+      '9': 'bg-teal-100 text-teal-800',
+      '10': 'bg-cyan-100 text-cyan-800',
+      '11': 'bg-lime-100 text-lime-800',
+      '12': 'bg-amber-100 text-amber-800'
     };
-    return gradeColors[grade] || 'bg-gray-100 text-gray-800 border-gray-200';
+    return gradeColors[grade] || 'bg-gray-100 text-gray-800';
+  };
+
+  // Safe statistic getters
+  const getTotalStudents = () => {
+    return statistics?.totalStudents || statistics?.data?.totalStudents || 0;
+  };
+
+  const getMaleCount = () => {
+    const genderStats = statistics?.genderStats || statistics?.data?.genderStats || [];
+    return genderStats.find(g => g._id === 'male')?.count || 0;
+  };
+
+  const getFemaleCount = () => {
+    const genderStats = statistics?.genderStats || statistics?.data?.genderStats || [];
+    return genderStats.find(g => g._id === 'female')?.count || 0;
   };
 
   if (loading) {
@@ -125,60 +173,49 @@ const Student = () => {
       {/* Header Section */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center">
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+          <div className="text-center mt-40">
+            <h1 className="text-3xl sm:text-4xl font-bold text-[#059669] mb-4">
               Our Students
             </h1>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Meet the bright minds of our school community. Discover talented students across all grades 
-              who are achieving excellence in academics, sports, and extracurricular activities.
+              Meet the bright minds of our school community. Discover talented students across all grades.
             </p>
           </div>
         </div>
       </div>
 
       {/* Statistics Section */}
-      {statistics && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-lg shadow-sm p-4 text-center">
-              <Users className="h-8 w-8 text-green-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-gray-900">{statistics.data?.totalStudents || 0}</div>
-              <div className="text-sm text-gray-600">Total Students</div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {statistics.data?.genderStats?.find(g => g._id === 'male')?.count || 0}
-              </div>
-              <div className="text-sm text-gray-600">Male Students</div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-4 text-center">
-              <div className="text-2xl font-bold text-pink-600">
-                {statistics.data?.genderStats?.find(g => g._id === 'female')?.count || 0}
-              </div>
-              <div className="text-sm text-gray-600">Female Students</div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-4 text-center">
-              <div className="text-2xl font-bold text-purple-600">
-                {statistics.data?.gradeStats?.length || 0}
-              </div>
-              <div className="text-sm text-gray-600">Active Grades</div>
-            </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="bg-white rounded-lg shadow-sm p-6 text-center border border-gray-200">
+            <Users className="h-8 w-8 text-green-600 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-gray-900">{getTotalStudents()}</div>
+            <div className="text-sm text-gray-600">Total Students</div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm p-6 text-center border border-gray-200">
+            <User className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-blue-600">{getMaleCount()}</div>
+            <div className="text-sm text-gray-600">Male Students</div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm p-6 text-center border border-gray-200">
+            <UserCheck className="h-8 w-8 text-pink-600 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-pink-600">{getFemaleCount()}</div>
+            <div className="text-sm text-gray-600">Female Students</div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Filters Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
             <div className="md:col-span-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <input
                   type="text"
-                  placeholder="Search by name, address, or email..."
+                  placeholder="Search by student name, address, or parent name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
@@ -195,7 +232,7 @@ const Student = () => {
               >
                 <option value="all">All Grades</option>
                 {grades.map(grade => (
-                  <option key={grade} value={grade}>{getGradeDisplayName(grade)}</option>
+                  <option key={grade} value={grade}>Grade {grade}</option>
                 ))}
               </select>
             </div>
@@ -210,7 +247,6 @@ const Student = () => {
                 <option value="all">All Genders</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
-                <option value="other">Other</option>
               </select>
             </div>
           </div>
@@ -222,7 +258,7 @@ const Student = () => {
                 Grade {selectedGrade}
                 <button 
                   onClick={() => setSelectedGrade('all')}
-                  className="ml-2 hover:opacity-70"
+                  className="ml-2 hover:opacity-70 transition-opacity"
                 >
                   ×
                 </button>
@@ -233,7 +269,7 @@ const Student = () => {
                 {getGenderDisplay(selectedGender)}
                 <button 
                   onClick={() => setSelectedGender('all')}
-                  className="ml-2 hover:opacity-70"
+                  className="ml-2 hover:opacity-70 transition-opacity"
                 >
                   ×
                 </button>
@@ -244,7 +280,7 @@ const Student = () => {
                 Search: "{searchTerm}"
                 <button 
                   onClick={() => setSearchTerm('')}
-                  className="ml-2 hover:opacity-70"
+                  className="ml-2 hover:opacity-70 transition-opacity"
                 >
                   ×
                 </button>
@@ -254,7 +290,7 @@ const Student = () => {
         </div>
 
         {/* Results Count */}
-        <div className="mb-6">
+        <div className="mb-4">
           <p className="text-lg text-gray-700">
             Showing <span className="font-semibold text-green-600">{filteredStudents.length}</span> 
             {filteredStudents.length === 1 ? ' student' : ' students'}
@@ -263,120 +299,96 @@ const Student = () => {
           </p>
         </div>
 
-        {/* Students Grid */}
-        {filteredStudents.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredStudents.map((student) => (
-              <div 
-                key={student._id} 
-                className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-300 overflow-hidden"
-              >
-                {/* Student Header */}
-                <div className="p-6 pb-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-1">{student.name}</h3>
-                      <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getGradeColor(student.grade)} border`}>
-                        Grade {student.grade}
-                      </span>
-                    </div>
-                    <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getGenderColor(student.gender)} border`}>
-                      {getGenderDisplay(student.gender)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Student Details */}
-                <div className="px-6 pb-6">
-                  {/* Address */}
-                  <div className="flex items-start mb-4">
-                    <MapPin className="h-5 w-5 text-gray-400 mr-3 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">Address</p>
-                      <p className="text-sm text-gray-600 mt-1">{student.address}</p>
-                    </div>
-                  </div>
-
-                  {/* Contact Information */}
-                  {(student.email || student.phone) && (
-                    <div className="mb-4">
-                      <p className="text-sm font-medium text-gray-700 mb-2">Contact</p>
-                      <div className="space-y-1">
-                        {student.email && (
-                          <p className="text-sm text-gray-600 flex items-center">
-                            <span className="mr-2">📧</span>
-                            {student.email}
-                          </p>
-                        )}
-                        {student.phone && (
-                          <p className="text-sm text-gray-600 flex items-center">
-                            <span className="mr-2">📞</span>
-                            {student.phone}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Parent Information */}
-                  {(student.parentName || student.parentPhone) && (
-                    <div className="border-t border-gray-100 pt-4">
-                      <p className="text-sm font-medium text-gray-700 mb-2">Parent Info</p>
-                      <div className="space-y-1">
-                        {student.parentName && (
-                          <p className="text-sm text-gray-600">👨‍👩‍👧‍👦 {student.parentName}</p>
-                        )}
-                        {student.parentPhone && (
-                          <p className="text-sm text-gray-600">📞 {student.parentPhone}</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          /* Empty State */
-          <div className="text-center py-16 bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="text-6xl mb-4">🎓</div>
-            <h3 className="text-2xl font-semibold text-gray-700 mb-2">No Students Found</h3>
-            <p className="text-gray-500 max-w-md mx-auto mb-6">
-              {searchTerm || selectedGrade !== 'all' || selectedGender !== 'all' 
-                ? "Try adjusting your search criteria or filters to find more students."
-                : "There are currently no students in the system."}
-            </p>
-            {(searchTerm || selectedGrade !== 'all' || selectedGender !== 'all') && (
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setSelectedGrade('all');
-                  setSelectedGender('all');
-                }}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Clear All Filters
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Grade Distribution Chart (Simplified) */}
-        {statistics?.data?.gradeStats && (
-          <div className="mt-12 bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-6">Students by Grade</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {statistics.data.gradeStats.map((gradeStat) => (
-                <div key={gradeStat._id} className="text-center">
-                  <div className={`h-16 rounded-lg flex items-center justify-center mb-2 ${getGradeColor(gradeStat._id)}`}>
-                    <span className="text-2xl font-bold">{gradeStat.count}</span>
-                  </div>
-                  <div className="text-sm font-medium text-gray-700">Grade {gradeStat._id}</div>
-                </div>
-              ))}
+        {/* Students Table */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-2"></div>
+              <p className="text-gray-500">Loading students...</p>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Student Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Grade
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Gender
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Address
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Parent Name
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredStudents.length > 0 ? (
+                    filteredStudents.map((student) => (
+                      <tr key={student._id || student.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{student.name}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getGradeColor(student.grade)}`}>
+                            Grade {student.grade}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getGenderColor(student.gender)}`}>
+                            {getGenderDisplay(student.gender)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-700 max-w-xs">
+                            {student.address || 'Not specified'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-700">
+                            {student.parentName || 'Not specified'}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-8 text-center">
+                        <div className="flex flex-col items-center">
+                          <Users size={48} className="text-gray-300 mb-2" />
+                          <p className="text-lg font-medium text-gray-700 mb-1">No Students Found</p>
+                          <p className="text-gray-500 max-w-md">
+                            {searchTerm || selectedGrade !== 'all' || selectedGender !== 'all' 
+                              ? "Try adjusting your search criteria or filters to find more students."
+                              : "There are currently no students in the system."}
+                          </p>
+                          {(searchTerm || selectedGrade !== 'all' || selectedGender !== 'all') && (
+                            <button
+                              onClick={() => {
+                                setSearchTerm('');
+                                setSelectedGrade('all');
+                                setSelectedGender('all');
+                              }}
+                              className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                            >
+                              Clear All Filters
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

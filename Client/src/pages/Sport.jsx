@@ -1,7 +1,7 @@
 // pages/Sport.jsx
 import React, { useState, useEffect } from 'react';
 import { sportService } from '../services/sportService';
-import { Calendar, MapPin, Users, Trophy, Search, Filter } from 'lucide-react';
+import { Calendar, MapPin, Users, Trophy, Search, Filter, Clock, Award } from 'lucide-react';
 
 const Sport = () => {
   const [sports, setSports] = useState([]);
@@ -26,10 +26,25 @@ const Sport = () => {
     try {
       setLoading(true);
       const response = await sportService.getAllSports();
-      setSports(response.data.data || response.data);
+      
+      // Handle different response structures
+      let sportsData = [];
+      if (response.data) {
+        if (response.data.data && Array.isArray(response.data.data)) {
+          sportsData = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          sportsData = response.data;
+        } else if (response.data.sports && Array.isArray(response.data.sports)) {
+          sportsData = response.data.sports;
+        }
+      }
+      
+      console.log('🏆 Sports loaded:', sportsData.length);
+      setSports(sportsData);
     } catch (error) {
-      console.error('Error fetching sports:', error);
+      console.error('❌ Error fetching sports:', error);
       alert('Failed to fetch sports events');
+      setSports([]);
     } finally {
       setLoading(false);
     }
@@ -48,9 +63,11 @@ const Sport = () => {
 
     if (searchTerm) {
       filtered = filtered.filter(sport =>
-        sport.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        sport.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        sport.venue.toLowerCase().includes(searchTerm.toLowerCase())
+        sport.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        sport.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        sport.venue?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        sport.participatingTeam?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        sport.chiefGuest?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -82,11 +99,52 @@ const Sport = () => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
+  // Get image URL - handle both base64 and regular URLs
+  const getImageUrl = (image) => {
+    if (!image) return null;
+    
+    if (image.startsWith('data:image/')) {
+      return image; // Base64 image
+    } else if (image.startsWith('http')) {
+      return image; // External URL
+    } else {
+      // Relative path - prepend with base URL if needed
+      return image.startsWith('/') ? image : `/${image}`;
+    }
+  };
+
+  // Get category icon
+  const getCategoryIcon = (category) => {
+    switch (category?.toLowerCase()) {
+      case 'outdoor':
+        return '🏕️';
+      case 'indoor':
+        return '🏢';
+      case 'tournament':
+        return '🏆';
+      case 'championship':
+        return '🥇';
+      case 'league':
+        return '⚽';
+      case 'competition':
+        return '🎯';
+      case 'sports-meet':
+        return '🤝';
+      default:
+        return '🏃';
+    }
   };
 
   if (loading) {
@@ -105,8 +163,8 @@ const Sport = () => {
       {/* Header Section */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center">
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+          <div className="text-center mt-30">
+            <h1 className="text-2xl sm:text-4xl font-bold text-[#059669] mb-4 ">
               Sports Events
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -127,7 +185,7 @@ const Sport = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <input
                   type="text"
-                  placeholder="Search events by title, type, or venue..."
+                  placeholder="Search events by title, type, venue, team, or chief guest..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
@@ -161,11 +219,48 @@ const Sport = () => {
                 <option value="all">All Categories</option>
                 {categoryOptions.map(category => (
                   <option key={category} value={category}>
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                    {category.charAt(0).toUpperCase() + category.slice(1).replace('-', ' ')}
                   </option>
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Active Filters Display */}
+          <div className="flex flex-wrap gap-2 mt-4">
+            {selectedStatus !== 'all' && (
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedStatus)} border`}>
+                {selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1)}
+                <button 
+                  onClick={() => setSelectedStatus('all')}
+                  className="ml-2 hover:opacity-70"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {selectedCategory !== 'all' && (
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(selectedCategory)} border`}>
+                {selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1).replace('-', ' ')}
+                <button 
+                  onClick={() => setSelectedCategory('all')}
+                  className="ml-2 hover:opacity-70"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {searchTerm && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                Search: "{searchTerm}"
+                <button 
+                  onClick={() => setSearchTerm('')}
+                  className="ml-2 hover:opacity-70"
+                >
+                  ×
+                </button>
+              </span>
+            )}
           </div>
         </div>
 
@@ -174,77 +269,127 @@ const Sport = () => {
           <p className="text-lg text-gray-700">
             Showing <span className="font-semibold text-green-600">{filteredSports.length}</span> 
             {filteredSports.length === 1 ? ' event' : ' events'}
+            {selectedStatus !== 'all' && ` (${selectedStatus})`}
+            {selectedCategory !== 'all' && ` in ${selectedCategory.replace('-', ' ')}`}
           </p>
         </div>
 
         {/* Sports Events Grid */}
         {filteredSports.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredSports.map((sport) => (
-              <div 
-                key={sport._id} 
-                className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 overflow-hidden"
-              >
-                {/* Event Header with Color Accent */}
+            {filteredSports.map((sport) => {
+              const imageUrl = getImageUrl(sport.image);
+              
+              return (
                 <div 
-                  className="h-2"
-                  style={{ backgroundColor: sport.colorCode }}
-                ></div>
-                
-                <div className="p-6">
-                  {/* Event Title and Type */}
-                  <div className="mb-4">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{sport.title}</h3>
-                    <p className="text-lg text-green-600 font-semibold">{sport.type}</p>
-                  </div>
-
-                  {/* Status and Category Badges */}
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(sport.status)} border`}>
-                      {sport.status}
-                    </span>
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(sport.category)} border`}>
-                      {sport.category}
-                    </span>
-                  </div>
-
-                  {/* Event Details */}
-                  <div className="space-y-3">
-                    <div className="flex items-center text-gray-600">
-                      <Calendar size={18} className="mr-3 text-gray-400" />
-                      <div>
-                        <div className="font-medium">{formatDate(sport.date)}</div>
-                        <div className="text-sm text-gray-500">{sport.time}</div>
+                  key={sport._id || sport.id} 
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 overflow-hidden"
+                >
+                  {/* Event Image */}
+                  <div className="h-48 overflow-hidden relative">
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={sport.title}
+                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    
+                    {/* Fallback when no image or image fails to load */}
+                    <div 
+                      className={`w-full h-full flex items-center justify-center ${
+                        imageUrl ? 'hidden' : 'flex'
+                      } bg-gradient-to-br from-green-400 to-blue-500`}
+                    >
+                      <div className="text-white text-center">
+                        <div className="text-3xl mb-2">{getCategoryIcon(sport.category)}</div>
+                        <span className="text-sm font-medium">{sport.type}</span>
                       </div>
                     </div>
-
-                    <div className="flex items-center text-gray-600">
-                      <MapPin size={18} className="mr-3 text-gray-400" />
-                      <span>{sport.venue}</span>
+                    
+                    {/* Status and Category Badges */}
+                    <div className="absolute top-4 left-4 flex flex-col gap-2">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(sport.status)} border`}>
+                        {sport.status}
+                      </span>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getCategoryColor(sport.category)} border`}>
+                        {sport.category}
+                      </span>
                     </div>
 
-                    <div className="flex items-center text-gray-600">
-                      <Users size={18} className="mr-3 text-gray-400" />
-                      <span>{sport.participatingTeam}</span>
+                    {/* Color Code Accent */}
+                    <div 
+                      className="absolute bottom-0 left-0 right-0 h-1"
+                      style={{ backgroundColor: sport.colorCode || '#059669' }}
+                    ></div>
+                  </div>
+
+                  <div className="p-6">
+                    {/* Event Title and Type */}
+                    <div className="mb-4">
+                      <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2">{sport.title}</h3>
+                      <p className="text-lg text-green-600 font-semibold">{sport.type}</p>
                     </div>
 
-                    {sport.chiefGuest && (
+                    {/* Event Details */}
+                    <div className="space-y-3">
+                      {/* Date & Time */}
                       <div className="flex items-center text-gray-600">
-                        <Trophy size={18} className="mr-3 text-gray-400" />
-                        <span>Chief Guest: {sport.chiefGuest}</span>
+                        <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center mr-3">
+                          <Calendar size={16} className="text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm">{formatDate(sport.date)}</div>
+                          {sport.time && (
+                            <div className="text-xs text-gray-500 flex items-center">
+                              <Clock size={12} className="mr-1" />
+                              {sport.time}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Venue */}
+                      <div className="flex items-center text-gray-600">
+                        <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center mr-3">
+                          <MapPin size={16} className="text-green-600" />
+                        </div>
+                        <span className="text-sm">{sport.venue}</span>
+                      </div>
+
+                      {/* Participating Team */}
+                      <div className="flex items-center text-gray-600">
+                        <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center mr-3">
+                          <Users size={16} className="text-purple-600" />
+                        </div>
+                        <span className="text-sm">{sport.participatingTeam}</span>
+                      </div>
+
+                      {/* Chief Guest */}
+                      {sport.chiefGuest && (
+                        <div className="flex items-center text-gray-600">
+                          <div className="w-8 h-8 bg-yellow-50 rounded-lg flex items-center justify-center mr-3">
+                            <Award size={16} className="text-yellow-600" />
+                          </div>
+                          <span className="text-sm">Chief Guest: {sport.chiefGuest}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Event Description */}
+                    {sport.details && (
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        <p className="text-sm text-gray-600 line-clamp-3">{sport.details}</p>
                       </div>
                     )}
                   </div>
-
-                  {/* Event Description */}
-                  {sport.details && (
-                    <div className="mt-4 pt-4 border-t border-gray-100">
-                      <p className="text-sm text-gray-600">{sport.details}</p>
-                    </div>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-16 bg-white rounded-lg shadow-sm border border-gray-200">

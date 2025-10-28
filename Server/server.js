@@ -1,6 +1,7 @@
 // server.js
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const connectDB = require('./config/db.js'); 
@@ -9,10 +10,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 connectDB();
 
-// Middleware
+// Middleware - INCREASE PAYLOAD SIZE LIMIT FOR IMAGES
 app.use(cors());
-app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+app.use(express.json({ limit: '50mb' })); 
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes.js'));
@@ -22,7 +24,7 @@ app.use('/api/sports', require('./routes/sportRoutes.js'));
 app.use('/api/events', require('./routes/eventRoutes.js'));
 app.use('/api/achievements', require('./routes/achievementRoutes.js'));
 app.use('/api/announcements', require('./routes/announcementRoutes.js'));
-
+app.use('/api/notifications', require('./routes/notificationRoutes.js'));
 
 // Basic route
 app.get('/', (req, res) => {
