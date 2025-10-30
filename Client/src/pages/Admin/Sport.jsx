@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { sportService } from '../../services/sportService';
 import { useAuth } from '../../Context/AuthContext';
-import { Edit, Trash2, Plus, Search, Filter, Trophy, Calendar, ClipboardList, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Edit, Trash2, Plus, Search, Filter, Trophy, Calendar, ClipboardList, Users, ChevronLeft, ChevronRight, Award } from 'lucide-react';
 
-// Helper Components
+// Helper Components (same as before)
 const StatCard = ({ icon, title, value, loading }) => (
   <div className="bg-white p-4 rounded-lg shadow-md flex items-center space-x-4">
     <div className="p-3 rounded-full bg-green-100 text-green-600">
@@ -134,7 +134,6 @@ const Sport = () => {
       
     } catch (error) {
       console.error('Error fetching sports:', error);
-      // *** FIX 1: Show a more detailed error message ***
       const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch sports';
       alert(`Error fetching sports: ${errorMessage}`);
     } finally {
@@ -232,43 +231,28 @@ const Sport = () => {
 
       if (formState.imageFile) {
         formData.append('image', formState.imageFile);
-        console.log('🖼️ Image file appended to form data');
       } else if (!formState.image && isEditing) {
         formData.append('image', '');
-        console.log('🗑️ Image removal requested');
       }
-
-      console.log('🔄 Submitting form data...');
       
       let response;
       if (isEditing) {
-        console.log(`📝 Updating sport: ${formState.id}`);
         response = await sportService.updateSport(formState.id, formData);
         alert('Sport event updated successfully!');
       } else {
-        console.log('🆕 Creating new sport');
         response = await sportService.createSport(formData);
         alert('New sport event added successfully!');
       }
       
-      console.log('✅ Sport event saved:', response.data);
       resetFormAndCloseModal();
-      
       fetchSports();
       fetchStats();
     } catch (error) {
       console.error('❌ Error saving sport event:', error);
-      
       const errorMessage = error.response?.data?.message || 
                           error.message || 
                           'Failed to save sport event';
-      
       alert(`Error: ${errorMessage}`);
-      
-      if (error.response) {
-        console.error('Response error:', error.response.data);
-        console.error('Status:', error.response.status);
-      }
     } finally {
       setAdminLoading(false);
     }
@@ -314,54 +298,51 @@ const Sport = () => {
     }
   };
 
-  // *** FIX 2: Removed the redundant `filteredSports` constant ***
-  // The backend is already filtering based on searchTerm and filterStatus,
-  // so we can render `sportsData` directly.
-
   return (
-    <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Sports Management</h1>
-
-      {/* Stats Cards */}
+    <div className="p-6 bg-gray-50 min-h-screen">
+      {/* Stats Cards Section - Achievement style */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard icon={<Trophy size={20} />} title="Total Events" value={stats?.totalEvents ?? '...'} loading={adminLoading} />
-        <StatCard icon={<Calendar size={20} />} title="Upcoming" value={stats?.upcomingEvents ?? '...'} loading={adminLoading} />
-        <StatCard icon={<ClipboardList size={20} />} title="Completed" value={stats?.completedEvents ?? '...'} loading={adminLoading} />
-        <StatCard icon={<Users size={20} />} title="Live" value={stats?.liveEvents ?? '...'} loading={adminLoading} />
+        <StatCard icon={<Trophy size={24} />} title="Total Events" value={stats?.totalEvents ?? '...'} loading={adminLoading} />
+        <StatCard icon={<Calendar size={24} />} title="Upcoming" value={stats?.upcomingEvents ?? '...'} loading={adminLoading} />
+        <StatCard icon={<ClipboardList size={24} />} title="Completed" value={stats?.completedEvents ?? '...'} loading={adminLoading} />
+        <StatCard icon={<Users size={24} />} title="Live" value={stats?.liveEvents ?? '...'} loading={adminLoading} />
       </div>
 
-      {/* Main Content Area */}
-      <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Search events..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 w-full sm:w-64"
-              />
-            </div>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              <option value="all">All Status</option>
-              <option value="upcoming">Upcoming</option>
-              <option value="live">Live</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
+      {/* Main Content Table - Achievement style */}
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-gray-800">Manage Sports Events</h2>
           <button
             onClick={() => { setIsEditing(false); setFormState(initialFormState); setIsModalOpen(true); }}
-            className="flex-1 sm:flex-none flex items-center justify-center p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+            className="flex items-center mt-4 sm:mt-0 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
           >
-            <Plus size={18} className="mr-2" /> Add New Sport
+            <Plus size={18} className="mr-2" /> Add New Sport Event
           </button>
+        </div>
+
+        {/* Search and Filter - Achievement style */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search events..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 w-full"
+            />
+          </div>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="all">All Status</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="live">Live</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
         </div>
 
         <div className="flex justify-between items-center mb-4">
@@ -370,81 +351,89 @@ const Sport = () => {
           </div>
         </div>
 
-        {/* Table */}
+        {/* Sports Table - Achievement style */}
         <div className="overflow-x-auto">
           {loading ? (
-            <TableSkeleton />
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+              <p className="text-gray-500 mt-2">Loading sports events...</p>
+            </div>
           ) : (
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title / Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Venue</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Image</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date & Time</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Venue</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {/* *** FIX 2: Use sportsData instead of filteredSports *** */}
-                {sportsData.map(sport => (
-                  <tr key={sport._id || sport.id} className="hover:bg-gray-50 transition duration-150">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sport.image ? (
-                        <img 
-                          src={sport.image} 
-                          alt={sport.title} 
-                          className="w-20 h-16 object-cover rounded-md shadow-sm" 
-                        />
-                      ) : (
-                        <div className="w-20 h-16 bg-gray-100 rounded-md flex items-center justify-center">
-                          <span className="text-xs text-gray-400">No Image</span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-semibold text-gray-900">{sport.title}</div>
-                      <div className="text-sm text-gray-500">{sport.type}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${getStatusBadge(sport.status)}`}>
-                        {sport.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{new Date(sport.date).toLocaleDateString()}</div>
-                      <div className="text-sm text-gray-500">{sport.time}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{sport.venue}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex justify-center space-x-3">
+                {sportsData.length > 0 ? (
+                  sportsData.map(sport => (
+                    <tr key={sport._id || sport.id} className="hover:bg-gray-50 transition duration-150">
+                      <td className="px-6 py-4">
+                        {sport.image ? (
+                          <img 
+                            src={sport.image} 
+                            alt={sport.title} 
+                            className="w-20 h-16 object-cover rounded-md shadow-sm" 
+                          />
+                        ) : (
+                          <div className="w-20 h-16 bg-gray-100 rounded-md flex items-center justify-center">
+                            <span className="text-xs text-gray-400">No Image</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {sport.title}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        {sport.type}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <span className={`px-3 py-1 rounded-full font-semibold text-xs capitalize ${getStatusBadge(sport.status)}`}>
+                          {sport.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        <div>{new Date(sport.date).toLocaleDateString()}</div>
+                        <div className="text-gray-500">{sport.time}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {sport.venue}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center space-x-2">
                         <button 
                           onClick={() => handleEdit(sport)} 
-                          className="text-indigo-600 hover:text-indigo-900 transition duration-200 p-2 rounded-full hover:bg-indigo-50"
+                          className="text-indigo-600 hover:text-indigo-900 p-1 rounded transition-colors"
                           title="Edit Event"
                         >
                           <Edit size={18} />
                         </button>
                         <button 
                           onClick={() => handleDelete(sport._id || sport.id)} 
-                          className="text-red-600 hover:text-red-900 transition duration-200 p-2 rounded-full hover:bg-red-50"
+                          className="text-red-600 hover:text-red-900 p-1 rounded transition-colors"
                           title="Delete Event"
                         >
                           <Trash2 size={18} />
                         </button>
-                      </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="text-center py-8 text-gray-500">
+                      <ClipboardList size={48} className="mx-auto mb-2 text-gray-400" />
+                      <p>No sports events found.</p>
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
-          )}
-          {/* *** FIX 2: Use sportsData.length instead of filteredSports.length *** */}
-          {sportsData.length === 0 && !loading && (
-            <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">No sport events found.</p>
-            </div>
           )}
         </div>
         
@@ -455,7 +444,7 @@ const Sport = () => {
         />
       </div>
 
-      {/* Add/Edit Modal */}
+      {/* Add/Edit Modal (keep your existing modal) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col m-4">

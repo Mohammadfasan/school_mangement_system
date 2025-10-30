@@ -3,6 +3,9 @@ const Sport = require('../models/Sport');
 const mongoose = require('mongoose');
 const ImageKitService = require('../services/imagekitService');
 
+// @desc    Create new sport
+// @route   POST /api/sports/create-sport
+// @access  Private/Admin
 exports.createSport = async (req, res) => {
   try {
     console.log('🟢 [Create Sport] Starting...');
@@ -62,11 +65,11 @@ exports.createSport = async (req, res) => {
       image: imageUrl,
       imageFileId: imageFileId,
       colorCode: colorCode || '#059669',
-      createdBy: req.user.userId
+      createdBy: req.user.userId 
     });
     
     await sport.populate('createdBy', 'name email');
-    
+
     res.status(201).json({
       success: true,
       message: 'Sport event created successfully',
@@ -74,24 +77,88 @@ exports.createSport = async (req, res) => {
     });
   } catch (error) {
     console.error('🔴 [Create Sport] Error:', error);
-
-    // ADDED: Handle multer errors (like file size) that bubble up from the route
-    if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({
-        success: false,
-        message: 'File size too large. Maximum size is 10MB.',
-      });
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ success: false, message: error.message });
     }
-    if (error.message && error.message.includes('Only image files')) {
-       return res.status(400).json({
-        success: false,
-        message: 'Only image files are allowed!',
-      });
-    }
-
     res.status(500).json({
       success: false,
-      message: error.message || 'Server error while creating sport event'
+      message: 'Server error while creating sport event'
+    });
+  }
+};
+
+// @desc    Get all sports (with pagination and search)
+// @route   GET /api/sports
+// @access  Public
+exports.getAllSports = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    // Build query
+    const query = {};
+    
+    if (req.query.status) {
+      query.status = req.query.status;
+    }
+    
+    if (req.query.search) {
+      query.title = { $regex: req.query.search, $options: 'i' };
+    }
+
+    const sports = await Sport.find(query)
+      .populate('createdBy', 'name email')
+      .sort({ date: -1, createdAt: -1 })
+      .limit(limit)
+      .skip(skip);
+
+    const total = await Sport.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      count: sports.length,
+      page,
+      pages: Math.ceil(total / limit),
+      total,
+      data: sports
+    });
+  } catch (error) {
+    console.error('Get all sports error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching sports'
+    });
+  }
+};
+
+// @desc    Get single sport
+// @route   GET /api/sports/:id
+// @access  Public
+exports.getSportById = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid sport ID' });
+    }
+    
+    const sport = await Sport.findById(req.params.id).populate('createdBy', 'name email');
+
+    if (!sport) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sport event not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: sport
+    });
+  } catch (error) {
+    console.error('Get sport by ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching sport event'
     });
   }
 };
@@ -101,97 +168,73 @@ exports.createSport = async (req, res) => {
 // @access  Private/Admin
 exports.updateSport = async (req, res) => {
   try {
-    console.log(`🟢 [Update Sport] Starting for ID: ${req.params.id}`);
-    
-    // Handle file upload
-    // await handleFileUpload(req, res); // <-- REMOVED: This line is deleted
-    
-    // req.body and req.file are already populated by the middleware in sportRoutes.js
-    console.log('📦 [Update Sport] Request body:', req.body);
-    console.log('🖼️ [Update Sport] File:', req.file ? `File received: ${req.file.originalname}` : 'No new file');
-    
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid sport ID' });
+    }
+
     const sport = await Sport.findById(req.params.id);
+
     if (!sport) {
-      console.warn(`🟡 [Update Sport] Not Found: ID ${req.params.id}`);
       return res.status(404).json({
         success: false,
         message: 'Sport event not found'
       });
     }
     
-    // Get text data
-    const updateData = { ...req.body };
-    
-    if (updateData.date) {
-      updateData.date = new Date(updateData.date);
-    }
+    let imageUrl = sport.image;
+    let imageFileId = sport.imageFileId;
 
-    // Handle Image Update
+    // Handle new image upload
     if (req.file) {
       try {
-        console.log('🚀 [Update Sport] New image provided. Uploading to ImageKit...');
-        const imageUploadResult = await ImageKitService.uploadImage(
-          req.file, // Pass the entire file object
-          'sports'  // Folder name
-        );
-        
-        updateData.image = imageUploadResult.url;
-        updateData.imageFileId = imageUploadResult.fileId;
-        console.log('✅ [Update Sport] New image uploaded successfully');
-
-        // If there was an old image, delete it from ImageKit
+        // Delete old image from ImageKit
         if (sport.imageFileId) {
-          console.log(`🗑️ [Update Sport] Deleting old image: ${sport.imageFileId}`);
           await ImageKitService.deleteImage(sport.imageFileId);
         }
+        
+        // Upload new image
+        const imageUploadResult = await ImageKitService.uploadImage(req.file, 'sports');
+        imageUrl = imageUploadResult.url;
+        imageFileId = imageUploadResult.fileId;
       } catch (uploadError) {
-        console.error('❌ [Update Sport] Image upload failed:', uploadError);
         return res.status(400).json({
           success: false,
-          message: `Image upload failed: ${uploadError.message}`
+          message: `Image update failed: ${uploadError.message}`
         });
       }
-    } else if (updateData.image === 'null' || updateData.image === '') {
-      // Handle explicit image removal
-      console.log('🗑️ [Update Sport] Image removal requested.');
-      if (sport.imageFileId) {
-        await ImageKitService.deleteImage(sport.imageFileId);
-      }
-      updateData.image = '';
-      updateData.imageFileId = null;
     }
 
-    const updatedSport = await Sport.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('createdBy', 'name email');
+    // Update fields
+    const { title, type, category, date, time, venue, participatingTeam, chiefGuest, status, details, colorCode } = req.body;
     
+    sport.title = title || sport.title;
+    sport.type = type || sport.type;
+    sport.category = category || sport.category;
+    sport.date = date ? new Date(date) : sport.date;
+    sport.time = time || sport.time;
+    sport.venue = venue || sport.venue;
+    sport.participatingTeam = participatingTeam || sport.participatingTeam;
+    sport.chiefGuest = chiefGuest !== undefined ? chiefGuest : sport.chiefGuest;
+    sport.status = status || sport.status;
+    sport.details = details !== undefined ? details : sport.details;
+    sport.colorCode = colorCode || sport.colorCode;
+    sport.image = imageUrl;
+    sport.imageFileId = imageFileId;
+    
+    const updatedSport = await sport.save();
+    
+    await updatedSport.populate('createdBy', 'name email');
+
     res.status(200).json({
       success: true,
       message: 'Sport event updated successfully',
       data: updatedSport
     });
   } catch (error) {
-    console.error('🔴 [Update Sport] Error:', error);
-
-    // ADDED: Handle multer errors (like file size) that bubble up from the route
-    if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({
-        success: false,
-        message: 'File size too large. Maximum size is 10MB.',
-      });
-    }
-     if (error.message && error.message.includes('Only image files')) {
-       return res.status(400).json({
-        success: false,
-        message: 'Only image files are allowed!',
-      });
-    }
-
+    console.error('Update sport error:', error);
     res.status(500).json({
       success: false,
-      message: error.message || 'Server error while updating sport event'
+      message: 'Server error while updating sport event'
     });
   }
 };
@@ -201,88 +244,46 @@ exports.updateSport = async (req, res) => {
 // @access  Private/Admin
 exports.deleteSport = async (req, res) => {
   try {
-    console.log(`🟢 [Delete Sport] Starting for ID: ${req.params.id}`);
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid sport ID' });
+    }
     
     const sport = await Sport.findById(req.params.id);
+
     if (!sport) {
-      console.warn(`🟡 [Delete Sport] Not Found: ID ${req.params.id}`);
       return res.status(404).json({
         success: false,
         message: 'Sport event not found'
       });
     }
 
-    // Delete image from ImageKit before deleting the DB record
+    // Delete image from ImageKit
     if (sport.imageFileId) {
-      console.log(`🗑️ [Delete Sport] Deleting image from ImageKit: ${sport.imageFileId}`);
-      await ImageKitService.deleteImage(sport.imageFileId);
-    }
-
-    await Sport.findByIdAndDelete(req.params.id);
-    
-    console.log(`✅ [Delete Sport] Successfully deleted record: ${req.params.id}`);
-    res.status(200).json({
-      success: true,
-      message: 'Sport event deleted successfully',
-      data: {}
-    });
-  } catch (error) {
-    console.error('🔴 [Delete Sport] Error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Server error while deleting sport event'
-    });
-  }
-};
-
-// Other functions remain the same...
-exports.getAllSports = async (req, res) => {
-  try {
-    const { category, status, page = 1, limit = 10 } = req.query;
-    let query = {};
-    if (category) query.category = category;
-    if (status) query.status = status;
-    
-    const sports = await Sport.find(query)
-      .populate('createdBy', 'name email')
-      .sort({ date: 1, createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-    
-    const total = await Sport.countDocuments(query);
-    
-    res.status(200).json({
-      success: true,
-      count: sports.length,
-      total,
-      page: parseInt(page),
-      pages: Math.ceil(total / limit),
-      data: sports
-    });
-  } catch (error) {
-    console.error('Get sports error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while fetching sports events'
-    });
-  }
-};
-
-exports.getSportById = async (req, res) => {
-  try {
-    const sport = await Sport.findById(req.params.id).populate('createdBy', 'name email');
-      
-    if (!sport) {
-      return res.status(4404).json({ success: false, message: 'Sport event not found' });
+      try {
+        await ImageKitService.deleteImage(sport.imageFileId);
+      } catch (deleteError) {
+        console.warn(`Could not delete image ${sport.imageFileId}: ${deleteError.message}`);
+      }
     }
     
-    res.status(200).json({ success: true, data: sport });
+    await sport.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: 'Sport event deleted successfully'
+    });
   } catch (error) {
-    console.error('Get sport by ID error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Delete sport error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while deleting sport event'
+    });
   }
 };
 
+// @desc    Get sports statistics
+// @route   GET /api/sports/stats/overview
+// @access  Private/Admin
 exports.getSportsStats = async (req, res) => {
   try {
     const totalEvents = await Sport.countDocuments();
@@ -290,16 +291,34 @@ exports.getSportsStats = async (req, res) => {
     const liveEvents = await Sport.countDocuments({ status: 'live' });
     const completedEvents = await Sport.countDocuments({ status: 'completed' });
     const cancelledEvents = await Sport.countDocuments({ status: 'cancelled' });
-    
+
+    // Get events by category
     const categoryStats = await Sport.aggregate([
-      { $group: { _id: '$category', count: { $sum: 1 } } }
+      {
+        $group: {
+          _id: '$category',
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          category: '$_id',
+          count: 1,
+          _id: 0
+        }
+      }
     ]);
-    
-    const recentEvents = await Sport.find()
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .populate('createdBy', 'name');
-      
+
+    // -----------------------------------------------------------------
+    //  FIX: REMOVED THE SLOW QUERY THAT SCANNED THE ENTIRE COLLECTION
+    //
+    //  const recentEvents = await Sport.find()
+    //    .sort({ createdAt: -1 })
+    //    .limit(5)
+    //    .populate('createdBy', 'name email');
+    //
+    // -----------------------------------------------------------------
+
     res.status(200).json({
       success: true,
       data: {
@@ -309,7 +328,7 @@ exports.getSportsStats = async (req, res) => {
         completedEvents,
         cancelledEvents,
         categoryStats,
-        recentEvents
+        // recentEvents // <-- This line is now removed
       }
     });
   } catch (error) {
@@ -321,6 +340,9 @@ exports.getSportsStats = async (req, res) => {
   }
 };
 
+// @desc    Get sports by status
+// @route   GET /api/sports/status/:status
+// @access  Public
 exports.getSportsByStatus = async (req, res) => {
   try {
     const { status } = req.params;
@@ -345,9 +367,9 @@ exports.getSportsByStatus = async (req, res) => {
     res.status(200).json({
       success: true,
       count: sports.length,
-      total,
-      page: parseInt(page),
+      page,
       pages: Math.ceil(total / limit),
+      total,
       data: sports
     });
   } catch (error) {
