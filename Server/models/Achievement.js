@@ -26,7 +26,7 @@ const achievementSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Category is required'],
     enum: ['Sport', 'Academic', 'Cultural', 'Leadership', 'Art', 'Other'],
-    default: 'Sport'
+    default: 'Other'
   },
   date: {
     type: Date,
@@ -43,7 +43,11 @@ const achievementSchema = new mongoose.Schema({
   },
   image: {
     type: String,
-    default: 'https://via.placeholder.com/400x300.png?text=Achievement'
+    default: '/uploads/achievements/default-achievement.jpg'
+  },
+  imageKitFileId: {
+    type: String, // Store ImageKit file ID for deletion
+    default: null
   },
   highlight: {
     type: Boolean,
@@ -58,7 +62,7 @@ const achievementSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for better query performance
+// Index for better performance
 achievementSchema.index({ category: 1, date: -1 });
 achievementSchema.index({ highlight: 1, date: -1 });
 

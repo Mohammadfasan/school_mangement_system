@@ -78,9 +78,9 @@ const Event = () => {
         console.log('Image file read completed, size:', reader.result.length, 'bytes');
         setFormState(prevState => ({
           ...prevState,
-          image: reader.result, // base64 string
+          image: reader.result, // base64 string for preview
           imagePreview: reader.result,
-          imageFile: file,
+          imageFile: file, // The actual File object
         }));
       };
       
@@ -119,27 +119,38 @@ const Event = () => {
     try {
       console.log('Submitting event form...');
       
-      const eventData = {
-        title: formState.title,
-        student: formState.student,
-        award: formState.award,
-        category: formState.category,
-        date: formState.date,
-        venue: formState.venue,
-        description: formState.description,
-        status: formState.status,
-        time: formState.time,
-        image: formState.image,
-      };
+      // --- START: FIX ---
+      // Create FormData to send files and text fields together
+      const formData = new FormData();
+      
+      // Append all the text fields
+      formData.append('title', formState.title);
+      formData.append('student', formState.student);
+      formData.append('award', formState.award);
+      formData.append('category', formState.category);
+      formData.append('date', formState.date);
+      formData.append('venue', formState.venue);
+      formData.append('description', formState.description);
+      formData.append('status', formState.status);
+      formData.append('time', formState.time);
 
-      console.log('Event data prepared, image size:', eventData.image ? eventData.image.length : 0, 'bytes');
+      // Append the actual file object, not the base64 string
+      // The backend (e.g., multer) will handle this file
+      if (formState.imageFile) {
+        formData.append('image', formState.imageFile);
+      }
+      // --- END: FIX ---
+
+      console.log('Event data prepared as FormData...');
 
       let response;
       if (isEditing) {
-        response = await eventService.updateEvent(formState.id, eventData);
+        // Pass the new 'formData' object
+        response = await eventService.updateEvent(formState.id, formData);
         alert('Event updated successfully!');
       } else {
-        response = await eventService.createEvent(eventData);
+        // Pass the new 'formData' object
+        response = await eventService.createEvent(formData);
         alert('New event added successfully!');
       }
       
@@ -172,9 +183,9 @@ const Event = () => {
       description: event.description,
       status: event.status,
       time: event.time,
-      image: event.image,
-      imagePreview: event.image,
-      imageFile: null,
+      image: event.image, // This is the existing image URL/path
+      imagePreview: event.image, // Show existing image
+      imageFile: null, // No new file selected yet
     });
   };
 

@@ -36,6 +36,8 @@ const Sport = () => {
           sportsData = response.data;
         } else if (response.data.sports && Array.isArray(response.data.sports)) {
           sportsData = response.data.sports;
+        } else if (Array.isArray(response.data)) {
+          sportsData = response.data;
         }
       }
       
@@ -99,8 +101,13 @@ const Sport = () => {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'Date not set';
+    
     try {
       const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
@@ -164,7 +171,7 @@ const Sport = () => {
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="text-center mt-30">
-            <h1 className="text-2xl sm:text-4xl font-bold text-[#059669] mb-4 ">
+            <h1 className="text-2xl sm:text-4xl font-bold text-[#059669] mb-4">
               Sports Events
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -290,34 +297,43 @@ const Sport = () => {
                     {imageUrl ? (
                       <img
                         src={imageUrl}
-                        alt={sport.title}
+                        alt={sport.title || 'Sport event'}
                         className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
                         onError={(e) => {
                           e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'flex';
+                          // Create fallback if it doesn't exist
+                          if (!e.target.nextSibling) {
+                            const fallback = document.createElement('div');
+                            fallback.className = 'w-full h-full flex items-center justify-center bg-gradient-to-br from-green-400 to-blue-500';
+                            fallback.innerHTML = `
+                              <div class="text-white text-center">
+                                <div class="text-3xl mb-2">${getCategoryIcon(sport.category)}</div>
+                                <span class="text-sm font-medium">${sport.type || 'Sport'}</span>
+                              </div>
+                            `;
+                            e.target.parentNode.appendChild(fallback);
+                          }
                         }}
                       />
                     ) : null}
                     
-                    {/* Fallback when no image or image fails to load */}
-                    <div 
-                      className={`w-full h-full flex items-center justify-center ${
-                        imageUrl ? 'hidden' : 'flex'
-                      } bg-gradient-to-br from-green-400 to-blue-500`}
-                    >
-                      <div className="text-white text-center">
-                        <div className="text-3xl mb-2">{getCategoryIcon(sport.category)}</div>
-                        <span className="text-sm font-medium">{sport.type}</span>
+                    {/* Fallback when no image */}
+                    {!imageUrl && (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-400 to-blue-500">
+                        <div className="text-white text-center">
+                          <div className="text-3xl mb-2">{getCategoryIcon(sport.category)}</div>
+                          <span className="text-sm font-medium">{sport.type || 'Sport Event'}</span>
+                        </div>
                       </div>
-                    </div>
+                    )}
                     
                     {/* Status and Category Badges */}
                     <div className="absolute top-4 left-4 flex flex-col gap-2">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(sport.status)} border`}>
-                        {sport.status}
+                        {sport.status || 'unknown'}
                       </span>
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getCategoryColor(sport.category)} border`}>
-                        {sport.category}
+                        {sport.category || 'general'}
                       </span>
                     </div>
 
@@ -331,8 +347,12 @@ const Sport = () => {
                   <div className="p-6">
                     {/* Event Title and Type */}
                     <div className="mb-4">
-                      <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2">{sport.title}</h3>
-                      <p className="text-lg text-green-600 font-semibold">{sport.type}</p>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2">
+                        {sport.title || 'Untitled Event'}
+                      </h3>
+                      <p className="text-lg text-green-600 font-semibold">
+                        {sport.type || 'Sports Event'}
+                      </p>
                     </div>
 
                     {/* Event Details */}
@@ -343,7 +363,9 @@ const Sport = () => {
                           <Calendar size={16} className="text-blue-600" />
                         </div>
                         <div>
-                          <div className="font-medium text-sm">{formatDate(sport.date)}</div>
+                          <div className="font-medium text-sm">
+                            {formatDate(sport.date)}
+                          </div>
                           {sport.time && (
                             <div className="text-xs text-gray-500 flex items-center">
                               <Clock size={12} className="mr-1" />
@@ -354,20 +376,24 @@ const Sport = () => {
                       </div>
 
                       {/* Venue */}
-                      <div className="flex items-center text-gray-600">
-                        <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center mr-3">
-                          <MapPin size={16} className="text-green-600" />
+                      {sport.venue && (
+                        <div className="flex items-center text-gray-600">
+                          <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center mr-3">
+                            <MapPin size={16} className="text-green-600" />
+                          </div>
+                          <span className="text-sm">{sport.venue}</span>
                         </div>
-                        <span className="text-sm">{sport.venue}</span>
-                      </div>
+                      )}
 
                       {/* Participating Team */}
-                      <div className="flex items-center text-gray-600">
-                        <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center mr-3">
-                          <Users size={16} className="text-purple-600" />
+                      {sport.participatingTeam && (
+                        <div className="flex items-center text-gray-600">
+                          <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center mr-3">
+                            <Users size={16} className="text-purple-600" />
+                          </div>
+                          <span className="text-sm">{sport.participatingTeam}</span>
                         </div>
-                        <span className="text-sm">{sport.participatingTeam}</span>
-                      </div>
+                      )}
 
                       {/* Chief Guest */}
                       {sport.chiefGuest && (

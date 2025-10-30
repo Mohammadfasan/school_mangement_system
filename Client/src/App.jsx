@@ -1,5 +1,6 @@
-// App.jsx
-import React, { useState } from 'react'
+// App.jsx (UPDATED for performance)
+
+import React, { useState, lazy, Suspense } from 'react' // Import lazy and Suspense
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { AuthProvider } from './Context/AuthContext.jsx'
 import Navbar from './components/Navbar.jsx'
@@ -13,16 +14,15 @@ import Event from './pages/Event.jsx'
 import LoginPopup from './components/Loginpop.jsx'
 import SignupPopup from './components/SignupPopup.jsx'
 
-// Admin imports
-import Layout from './pages/Admin/Layout.jsx'
-import Dashboard from './pages/Admin/Dashboard.jsx'
-import EventAdmin from './pages/Admin/Event.jsx'
-import Announcement from './pages/Admin/Annocement.jsx'
-
-import TimetableAdmin from './pages/Admin/Timetable.jsx' 
-import SportAdmin from './pages/Admin/Sport.jsx'
-import AchievementAdmin from './pages/Admin/Achievement.jsx'
-import StudentAdmin from './pages/Admin/Student.jsx'
+// Admin imports - ***CHANGE TO LAZY LOADED IMPORTS***
+const Layout = lazy(() => import('./pages/Admin/Layout.jsx'));
+const Dashboard = lazy(() => import('./pages/Admin/Dashboard.jsx'));
+const EventAdmin = lazy(() => import('./pages/Admin/Event.jsx'));
+const Announcement = lazy(() => import('./pages/Admin/Annocement.jsx'));
+const TimetableAdmin = lazy(() => import('./pages/Admin/Timetable.jsx'));
+const SportAdmin = lazy(() => import('./pages/Admin/Sport.jsx'));
+const AchievementAdmin = lazy(() => import('./pages/Admin/Achievement.jsx'));
+const StudentAdmin = lazy(() => import('./pages/Admin/Student.jsx'));
 
 
 const PublicLayout = () => {
@@ -86,19 +86,24 @@ const App = () => {
     <AuthProvider>
       
       <PublicLayout />
-      <Routes>
-        <Route path="/dashboard" element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="event_manage" element={<EventAdmin />} />
-          <Route path="announcement_manage" element={<Announcement />} />
-          {/* This route now correctly renders the imported component */}
-          <Route path="timetable_manage" element={<TimetableAdmin />} />
-          <Route path="sport_manage" element={<SportAdmin />} />
-          <Route path="achievement_manage" element={<AchievementAdmin />} />
-          <Route path="student_manage" element={<StudentAdmin />} />
-          <Route path="*" element={<div>Admin Page Not Found</div>} />
-        </Route>
-      </Routes>
+      <Suspense fallback={
+        <div className="flex justify-center items-center h-screen">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-500"></div>
+        </div>
+      }>
+        <Routes>
+          <Route path="/dashboard" element={<Layout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="event_manage" element={<EventAdmin />} />
+            <Route path="announcement_manage" element={<Announcement />} />
+            <Route path="timetable_manage" element={<TimetableAdmin />} />
+            <Route path="sport_manage" element={<SportAdmin />} />
+            <Route path="achievement_manage" element={<AchievementAdmin />} />
+            <Route path="student_manage" element={<StudentAdmin />} />
+            <Route path="*" element={<div>Admin Page Not Found</div>} />
+          </Route>
+        </Routes>
+      </Suspense>
     </AuthProvider>
   )
 }

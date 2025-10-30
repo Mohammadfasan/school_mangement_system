@@ -5,7 +5,7 @@ import { Menu, X, ChevronDown, LogOut } from 'lucide-react';
 import Notification from '../assets/images/notification.png';
 import { useNavigate, useLocation } from 'react-router-dom';
 import NotificationPopup from '../pages/NotificationPopup';
-import { useAuth } from '../Context/AuthContext';
+import { useAuth } from '../Context/AuthContext.jsx';
 
 const Navbar = ({ onLoginClick, onSignupClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -136,31 +136,38 @@ const Navbar = ({ onLoginClick, onSignupClick }) => {
 
   return (
     <>
-      {/* Fixed Navbar - Top of the screen */}
       <div className="fixed top-4 left-1/2 transform -translate-x-1/2 w-full max-w-7xl z-50 px-4">
         <div className='bg-white border-2 border-[#059669] lg:px-4 lg:py-4 rounded-3xl shadow-lg'>
-          <div className='flex items-center justify-between'>
+          {/* Desktop View */}
+          <div className='hidden md:flex items-center justify-between'>
             <div className='flex items-center'>
-              <img src={Logo} alt="Sport Logo" className='h-8 w-8 mr-3 cursor-pointer' onClick={() => handleNavigation('Home')} />
+              {/* Round Logo */}
+              <img 
+                src={Logo} 
+                alt="Sport Logo" 
+                className='h-10 w-10 mr-3 cursor-pointer rounded-full border-2 border-[#059669] p-1' 
+                onClick={() => handleNavigation('Home')} 
+              />
             </div>
 
-            <nav className='hidden md:flex space-x-7'>
+            {/* Larger Menu Items */}
+            <nav className='flex space-x-8'>
               {navItems.map((item) => (
                 <div key={item.label} className='relative'>
                   {item.dropdown ? (
                     <div className='relative' ref={dropdownRef}>
                       <button
                         onClick={() => setIsPagesOpen(!isPagesOpen)}
-                        className={`flex items-center gap-1 font-medium transition duration-200 relative pb-2 ${
+                        className={`flex items-center gap-1 font-semibold text-lg transition duration-200 relative pb-2 ${
                           isItemActive(item) ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
                         }`}
                         aria-expanded={isPagesOpen}
                         aria-haspopup="true"
                       >
-                        {item.label} <ChevronDown size={16} />
+                        {item.label} <ChevronDown size={18} />
                         
                         {isItemActive(item) && (
-                          <div className='absolute bottom-0 left-0 w-full h-[3px] bg-[#A7F8A4] rounded-full'></div>
+                          <div className='absolute bottom-0 left-0 w-full h-[4px] bg-[#A7F8A4] rounded-full'></div>
                         )}
                       </button>
 
@@ -168,21 +175,21 @@ const Navbar = ({ onLoginClick, onSignupClick }) => {
                         <ul 
                           role="menu" 
                           aria-label="Pages submenu"
-                          className='absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-2'
+                          className='absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-2'
                         >
                           {item.dropdown.map((dropdownItem) => (
                             <li key={dropdownItem.label}>
                               <button
                                 onClick={() => handleNavigation(dropdownItem.label, dropdownItem.route)}
-                                className={`block w-full text-left px-4 py-2 transition-colors duration-200 relative ${
+                                className={`block w-full text-left px-4 py-3 transition-colors duration-200 relative text-base ${
                                   activePage === dropdownItem.label 
-                                    ? 'text-[#059669] bg-green-50' 
+                                    ? 'text-[#059669] bg-green-50 font-semibold' 
                                     : 'text-gray-600 hover:bg-gray-50 hover:text-[#059669]'
                                 }`}
                               >
                                 {dropdownItem.label}
                                 {activePage === dropdownItem.label && (
-                                  <div className='absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-6 bg-[#059669] rounded-full'></div>
+                                  <div className='absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-[#059669] rounded-full'></div>
                                 )}
                               </button>
                             </li>
@@ -193,14 +200,14 @@ const Navbar = ({ onLoginClick, onSignupClick }) => {
                   ) : (
                     <button
                       onClick={() => handleNavigation(item.label, item.route)}
-                      className={`font-medium transition duration-200 relative pb-2 ${
+                      className={`font-semibold text-lg transition duration-200 relative pb-2 ${
                         activePage === item.label ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
                       }`}
                     >
                       {item.label}
                       
                       {activePage === item.label && (
-                        <div className='absolute bottom-0 left-0 w-full h-[3px] bg-[#A7F8A4] rounded-full'></div>
+                        <div className='absolute bottom-0 left-0 w-full h-[4px] bg-[#A7F8A4] rounded-full'></div>
                       )}
                     </button>
                   )}
@@ -208,23 +215,23 @@ const Navbar = ({ onLoginClick, onSignupClick }) => {
               ))}
             </nav>
 
-            <div className='hidden md:flex items-center space-x-6'>
+            <div className='flex items-center space-x-6'>
               <div className='flex items-center space-x-4'>
                 {!isAuthenticated ? (
                   <>
                     <button 
-                      className={`font-medium px-4 py-2 transition duration-200 relative pb-2 ${
+                      className={`font-semibold text-lg px-5 py-2 transition duration-200 relative pb-2 ${
                         activePage === 'Sign In' ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
                       }`}
                       onClick={onLoginClick}
                     >
                       Sign In
                       {activePage === 'Sign In' && (
-                        <div className='absolute bottom-0 left-0 w-full h-[3px] bg-[#A7F8A4] rounded-full'></div>
+                        <div className='absolute bottom-0 left-0 w-full h-[4px] bg-[#A7F8A4] rounded-full'></div>
                       )}
                     </button>
                     <button 
-                      className='bg-[#059669] text-white font-medium px-6 py-2 rounded-lg hover:bg-[#047857] transition duration-200'
+                      className='bg-[#059669] text-white font-semibold text-lg px-7 py-3 rounded-lg hover:bg-[#047857] transition duration-200'
                       onClick={onSignupClick}
                     >
                       SIGN UP
@@ -233,160 +240,196 @@ const Navbar = ({ onLoginClick, onSignupClick }) => {
                 ) : (
                   <div className='flex items-center space-x-4'>
                     <div className='flex items-center space-x-3'>
-                      <span className='text-gray-700 font-medium'>Welcome, {user?.firstName || user?.name || 'User'}</span>
+                      <span className='text-gray-700 font-semibold text-lg'>Welcome, {user?.firstName || user?.name || 'User'}</span>
                       {isAdminUser && (
-                        <span className='bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full'>
+                        <span className='bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full font-medium'>
                           Admin
                         </span>
                       )}
                     </div>
                     <button 
                       onClick={handleLogout}
-                      className='flex items-center space-x-2 bg-red-500 text-white font-medium px-4 py-2 rounded-lg hover:bg-red-600 transition duration-200'
+                      className='flex items-center space-x-2 bg-red-500 text-white font-semibold px-5 py-3 rounded-lg hover:bg-red-600 transition duration-200 text-lg'
                     >
-                      <LogOut size={16} />
+                      <LogOut size={18} />
                       <span>Logout</span>
                     </button>
                   </div>
                 )}
               </div>
+              
+              {/* Notification moved closer to menu */}
               <div className='relative' ref={notificationRef}>
                 <button onClick={toggleNotifications} className="relative">
                   <img 
                     src={Notification} 
                     alt="Notifications" 
-                    className='h-6 w-6 rounded cursor-pointer hover:opacity-80 transition duration-200'
+                    className='h-7 w-7 rounded cursor-pointer hover:opacity-80 transition duration-200'
                   />
-                  <span className='absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-white'></span>
+                  <span className='absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full border-2 border-white'></span>
                 </button>
                 <NotificationPopup isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
               </div>
             </div>
-
-            <div className='relative md:hidden flex items-center' ref={notificationRef}>
-              <button onClick={toggleNotifications} className="relative mr-2">
-                <img 
-                  src={Notification} 
-                  alt="Notifications" 
-                  className='h-5 w-5 rounded cursor-pointer hover:opacity-80 transition duration-200'
-                />
-                <span className='absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-white'></span>
-              </button>
-              <NotificationPopup isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
-            </div>
-
-            <button 
-              className='md:hidden p-2 text-gray-700 hover:text-[#059669] transition duration-200 rounded-lg hover:bg-gray-50'
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              aria-label="Toggle menu"
-              aria-expanded={isMenuOpen}
-            >
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
           </div>
 
-          <div className={`md:hidden overflow-hidden transition-all duration-300 ${
-            isMenuOpen ? 'max-h-100 opacity-100 mt-4 pb-2 border-t border-gray-200 pt-4' : 'max-h-0 opacity-0'
-          }`}>
-            <nav className='flex flex-col space-y-3'>
-              {navItems.map((item) => (
-                <div key={item.label}>
-                  {item.dropdown ? (
-                    <div>
+          {/* Mobile View */}
+          <div className='md:hidden'>
+            <div className='flex items-center justify-between'>
+              {/* Round Logo - Left */}
+              <div className='flex items-center flex-1'>
+                <img 
+                  src={Logo} 
+                  alt="Sport Logo" 
+                  className='h-10 w-10 cursor-pointer rounded-full border-2 border-[#059669] p-1' 
+                  onClick={() => handleNavigation('Home')} 
+                />
+              </div>
+
+              {/* Notification and Menu together - Right Side */}
+              <div className='flex items-center space-x-4'>
+                {/* Notification */}
+                <div className='relative' ref={notificationRef}>
+                  <button onClick={toggleNotifications} className="relative">
+                    <img 
+                      src={Notification} 
+                      alt="Notifications" 
+                      className='h-7 w-7 rounded cursor-pointer hover:opacity-80 transition duration-200'
+                    />
+                    <span className='absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full border-2 border-white'></span>
+                  </button>
+                  <NotificationPopup isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
+                </div>
+
+                {/* Menu Button */}
+                <button 
+                  className='p-2 text-gray-700 hover:text-[#059669] transition duration-200 rounded-lg hover:bg-gray-50'
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  aria-label="Toggle menu"
+                  aria-expanded={isMenuOpen}
+                >
+                  {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Mobile Menu - Larger Text - FIXED: Now shows auth buttons properly */}
+            <div className={`overflow-hidden transition-all duration-300 ${
+              isMenuOpen ? 'max-h-screen opacity-100 mt-4 pb-2 border-t border-gray-200 pt-4' : 'max-h-0 opacity-0'
+            }`}>
+              <nav className='flex flex-col space-y-4'>
+                {navItems.map((item) => (
+                  <div key={item.label}>
+                    {item.dropdown ? (
+                      <div>
+                        <button
+                          onClick={() => setIsPagesOpen(!isPagesOpen)}
+                          className={`flex items-center justify-between w-full font-semibold text-lg py-3 transition duration-200 relative ${
+                            isItemActive(item) ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
+                          }`}
+                        >
+                          <span className='flex items-center'>
+                            {item.label}
+                            {isItemActive(item) && (
+                              <div className='ml-3 w-2 h-6 bg-[#059669] rounded-full'></div>
+                            )}
+                          </span>
+                          <ChevronDown size={20} className={`transition-transform duration-200 ${isPagesOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        <div className={`overflow-hidden transition-all duration-300 ${
+                          isPagesOpen ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
+                        }`}>
+                          <ul className='flex flex-col pl-6 mt-2 space-y-3'>
+                            {item.dropdown.map((dropdownItem) => (
+                              <li key={dropdownItem.label}>
+                                <button
+                                  onClick={() => handleNavigation(dropdownItem.label, dropdownItem.route)}
+                                  className={`flex items-center w-full text-left py-2 transition duration-200 text-base relative ${
+                                    activePage === dropdownItem.label ? 'text-[#059669] font-semibold' : 'text-gray-600 hover:text-[#059669]'
+                                  }`}
+                                >
+                                  {dropdownItem.label}
+                                  {activePage === dropdownItem.label && (
+                                    <div className='ml-3 w-2 h-5 bg-[#059669] rounded-full'></div>
+                                  )}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    ) : (
                       <button
-                        onClick={() => setIsPagesOpen(!isPagesOpen)}
-                        className={`flex items-center justify-between w-full font-medium py-2 transition duration-200 relative ${
-                          isItemActive(item) ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
+                        onClick={() => handleNavigation(item.label, item.route)}
+                        className={`flex items-center w-full text-left font-semibold text-lg py-3 transition duration-200 ${
+                          activePage === item.label ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
                         }`}
                       >
-                        <span className='flex items-center'>
-                          {item.label}
-                          {isItemActive(item) && (
-                            <div className='ml-2 w-1 h-4 bg-[#059669] rounded-full'></div>
-                          )}
-                        </span>
-                        <ChevronDown size={16} className={`transition-transform duration-200 ${isPagesOpen ? 'rotate-180' : ''}`} />
+                        {item.label}
+                        {activePage === item.label && (
+                          <div className='ml-3 w-2 h-6 bg-[#059669] rounded-full'></div>
+                        )}
                       </button>
-                      <div className={`overflow-hidden transition-all duration-300 ${
-                        isPagesOpen ? 'max-h-32 opacity-100' : 'max-h-0 opacity-0'
-                      }`}>
-                        <ul className='flex flex-col pl-4 mt-1 space-y-2'>
-                          {item.dropdown.map((dropdownItem) => (
-                            <li key={dropdownItem.label}>
-                              <button
-                                onClick={() => handleNavigation(dropdownItem.label, dropdownItem.route)}
-                                className={`flex items-center w-full text-left py-1 transition duration-200 relative ${
-                                  activePage === dropdownItem.label ? 'text-[#059669]' : 'text-gray-600 hover:text-[#059669]'
-                                }`}
-                              >
-                                {dropdownItem.label}
-                                {activePage === dropdownItem.label && (
-                                  <div className='ml-2 w-1 h-4 bg-[#059669] rounded-full'></div>
-                                )}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
+                    )}
+                  </div>
+                ))}
+                
+                {/* FIXED: Authentication section - Now properly shows Sign In/Logout */}
+                <div className='flex flex-col space-y-4 mt-3 pt-3 border-t border-gray-200'>
+                  {!isAuthenticated ? (
+                    <>
+                      {/* Sign In Button */}
+                      <button 
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          onLoginClick();
+                        }}
+                        className={`flex items-center font-semibold text-lg py-3 transition duration-200 ${
+                          activePage === 'Sign In' ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
+                        }`}
+                      >
+                        Sign In
+                        {activePage === 'Sign In' && (
+                          <div className='ml-3 w-2 h-6 bg-[#059669] rounded-full'></div>
+                        )}
+                      </button>
+                      
+                      {/* Sign Up Button */}
+                      <button 
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          onSignupClick();
+                        }}
+                        className='bg-[#059669] text-white font-semibold text-lg py-3 rounded-lg hover:bg-[#047857] transition duration-200 text-center'
+                      >
+                        SIGN UP
+                      </button>
+                    </>
                   ) : (
-                    <button
-                      onClick={() => handleNavigation(item.label, item.route)}
-                      className={`flex items-center w-full text-left font-medium py-2 transition duration-200 ${
-                        activePage === item.label ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
-                      }`}
-                    >
-                      {item.label}
-                      {activePage === item.label && (
-                        <div className='ml-2 w-1 h-4 bg-[#059669] rounded-full'></div>
-                      )}
-                    </button>
+                    <div className='flex flex-col space-y-4'>
+                      {/* User Info */}
+                      <div className='flex flex-col space-y-3 py-3'>
+                        <span className='text-gray-700 font-semibold text-lg'>Welcome, {user?.firstName || user?.name || 'User'}</span>
+                        {isAdminUser && (
+                          <span className='bg-green-100 text-green-800 text-base px-3 py-2 rounded-full text-center w-fit font-medium'>
+                            Admin
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Logout Button */}
+                      <button 
+                        onClick={handleLogout}
+                        className='flex items-center justify-center space-x-3 bg-red-500 text-white font-semibold text-lg py-3 rounded-lg hover:bg-red-600 transition duration-200'
+                      >
+                        <LogOut size={20} />
+                        <span>Logout</span>
+                      </button>
+                    </div>
                   )}
                 </div>
-              ))}
-              
-              <div className='flex flex-col space-y-3 mt-2 pt-2 border-t border-gray-200'>
-                {!isAuthenticated ? (
-                  <>
-                    <button 
-                      className={`flex items-center font-medium py-2 transition duration-200 ${
-                        activePage === 'Sign In' ? 'text-[#059669]' : 'text-gray-700 hover:text-[#059669]'
-                      }`}
-                      onClick={onLoginClick}
-                    >
-                      Sign In
-                      {activePage === 'Sign In' && (
-                        <div className='ml-2 w-1 h-4 bg-[#059669] rounded-full'></div>
-                      )}
-                    </button>
-                    <button 
-                      className='bg-[#059669] text-white font-medium py-2 rounded-lg hover:bg-[#047857] transition duration-200 text-center'
-                      onClick={onSignupClick}
-                    >
-                      SIGN UP
-                    </button>
-                  </>
-                ) : (
-                  <div className='flex flex-col space-y-3'>
-                    <div className='flex flex-col space-y-2 py-2'>
-                      <span className='text-gray-700 font-medium'>Welcome, {user?.firstName || user?.name || 'User'}</span>
-                      {isAdminUser && (
-                        <span className='bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full text-center w-fit'>
-                          Admin
-                        </span>
-                      )}
-                    </div>
-                    <button 
-                      onClick={handleLogout}
-                      className='flex items-center justify-center space-x-2 bg-red-500 text-white font-medium py-2 rounded-lg hover:bg-red-600 transition duration-200'
-                    >
-                      <LogOut size={16} />
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </nav>
+              </nav>
+            </div>
           </div>
         </div>
       </div>

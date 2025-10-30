@@ -49,25 +49,28 @@ const sportSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  
   image: {
-    type: String,
-    default: ''
+    type: String,  
+    default: '' 
   },
+  imageFileId: {
+    type: String, 
+    default: null
+  },
+
   colorCode: {
     type: String,
     default: '#059669'
   },
+  
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
-  }
+  },
 }, {
   timestamps: true
 });
-
-// Index for better query performance
-sportSchema.index({ date: 1, status: 1 });
-sportSchema.index({ category: 1 });
 
 module.exports = mongoose.model('Sport', sportSchema);

@@ -1,49 +1,18 @@
 // controllers/achievementControllers.js
 const Achievement = require('../models/Achievement');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-
-// Ensure uploads directory exists
-const uploadsDir = 'uploads/achievements';
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadsDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'achievement-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-  fileFilter: function (req, file, cb) {
-    const filetypes = /jpeg|jpg|png|gif|webp/;
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = filetypes.test(file.mimetype);
-    
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Only image files (JPEG, JPG, PNG, GIF, WebP) are allowed'));
-    }
-  }
-}).single('image');
+const mongoose = require('mongoose');
+const ImageKitService = require('../services/imagekitService');
+const upload = require('../middleware/uploadMiddleware');
 
 // Helper function to handle file upload
 const handleFileUpload = (req, res) => {
   return new Promise((resolve, reject) => {
-    upload(req, res, function (err) {
+    upload.single('image')(req, res, function (err) {
       if (err) {
         if (err.code === 'LIMIT_FILE_SIZE') {
           reject(new Error('File size too large. Maximum size is 10MB.'));
+        } else if (err.message.includes('Only image files')) {
+          reject(new Error('Only image files are allowed!'));
         } else {
           reject(err);
         }
@@ -54,100 +23,24 @@ const handleFileUpload = (req, res) => {
   });
 };
 
-// @desc    Get all achievements
-// @route   GET /api/achievements
-// @access  Public
-exports.getAllAchievements = async (req, res) => {
-  try {
-    const { category, highlight, page = 1, limit = 100 } = req.query;
-    
-    let query = {};
-    
-    // Filter by category
-    if (category && category !== 'All') {
-      query.category = category;
-    }
-    
-    // Filter by highlight
-    if (highlight === 'true') {
-      query.highlight = true;
-    }
-    
-    const achievements = await Achievement.find(query)
-      .sort({ date: -1, createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .populate('createdBy', 'name email');
-    
-    const total = await Achievement.countDocuments(query);
-    
-    res.status(200).json({
-      success: true,
-      count: achievements.length,
-      total,
-      page: parseInt(page),
-      pages: Math.ceil(total / limit),
-      data: achievements
-    });
-  } catch (error) {
-    console.error('Get achievements error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while fetching achievements'
-    });
-  }
-};
-
-// @desc    Get single achievement
-// @route   GET /api/achievements/:id
-// @access  Public
-exports.getAchievementById = async (req, res) => {
-  try {
-    const achievement = await Achievement.findById(req.params.id)
-      .populate('createdBy', 'name email');
-    
-    if (!achievement) {
-      return res.status(404).json({
-        success: false,
-        message: 'Achievement not found'
-      });
-    }
-    
-    res.status(200).json({
-      success: true,
-      data: achievement
-    });
-  } catch (error) {
-    console.error('Get achievement error:', error);
-    if (error.name === 'CastError') {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid achievement ID'
-      });
-    }
-    res.status(500).json({
-      success: false,
-      message: 'Server error while fetching achievement'
-    });
-  }
-};
-
 // @desc    Create new achievement
 // @route   POST /api/achievements/create-achievement
 // @access  Private/Admin
 exports.createAchievement = async (req, res) => {
   try {
+    console.log('🟢 [Create Achievement] Starting...');
+    
     // Handle file upload first
     await handleFileUpload(req, res);
     
-    console.log('Request body:', req.body);
-    console.log('Uploaded file:', req.file);
+    console.log('📦 Request body:', req.body);
+    console.log('🖼️ Uploaded file:', req.file ? `File received: ${req.file.originalname}` : 'No file');
     
-    // Safety check: ensure the user ID is present
+    // Security Check
     if (!req.user || !req.user.userId) {
       return res.status(401).json({
         success: false,
-        message: 'Not authorized, user ID not found'
+        message: 'Not authorized, user ID not found.'
       });
     }
 
@@ -163,7 +56,7 @@ exports.createAchievement = async (req, res) => {
       highlight
     } = req.body;
     
-    // Check required fields
+    // Required Fields Check
     if (!title || !student || !award || !category || !date) {
       return res.status(400).json({
         success: false,
@@ -185,12 +78,26 @@ exports.createAchievement = async (req, res) => {
       });
     }
     
-    // Handle image path
-    let imagePath = '/uploads/achievements/default-achievement.jpg';
+    // Handle image upload to ImageKit
+    let imageData = {
+      url: '/uploads/achievements/default-achievement.jpg',
+      fileId: null
+    };
+    
     if (req.file) {
-      imagePath = `/uploads/achievements/${req.file.filename}`;
+      try {
+        imageData = await ImageKitService.uploadImage(req.file, 'achievements');
+        console.log('✅ Image uploaded to ImageKit:', imageData);
+      } catch (uploadError) {
+        console.error('❌ ImageKit upload failed:', uploadError);
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to upload image. Check ImageKit configuration.'
+        });
+      }
     }
     
+    // Create Mongoose Document
     const achievement = new Achievement({
       title,
       student,
@@ -200,12 +107,15 @@ exports.createAchievement = async (req, res) => {
       date,
       venue: venue || 'N/A',
       description: description || '',
-      image: imagePath,
+      image: imageData.url,
+      imageKitFileId: imageData.fileId,
       highlight: highlight === 'true' || false,
       createdBy: req.user.userId
     });
     
     const savedAchievement = await achievement.save();
+    
+    console.log('✅ Achievement created successfully:', savedAchievement._id);
     
     res.status(201).json({
       success: true,
@@ -213,17 +123,10 @@ exports.createAchievement = async (req, res) => {
       data: savedAchievement
     });
   } catch (error) {
-    console.error('Create achievement error:', error);
+    console.error('❌ Create achievement FATAL error:', error);
     
-    // Handle file upload errors
-    if (error.message.includes('File size too large')) {
-      return res.status(400).json({
-        success: false,
-        message: error.message
-      });
-    }
-    
-    if (error.message.includes('Only image files')) {
+    // Handle specific client-side errors
+    if (error.message.includes('File size too large') || error.message.includes('Only image files')) {
       return res.status(400).json({
         success: false,
         message: error.message
@@ -250,12 +153,21 @@ exports.createAchievement = async (req, res) => {
 // @access  Private/Admin
 exports.updateAchievement = async (req, res) => {
   try {
+    console.log('🟢 [Update Achievement] Starting for ID:', req.params.id);
+    
     // Handle file upload first
     await handleFileUpload(req, res);
     
-    console.log('Update request body:', req.body);
-    console.log('Update ID:', req.params.id);
-    console.log('Uploaded file:', req.file);
+    console.log('📦 Update request body:', req.body);
+    console.log('🖼️ Uploaded file:', req.file ? 'File received' : 'No file');
+    
+    // Validate ID
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid achievement ID format'
+      });
+    }
     
     const {
       title,
@@ -309,7 +221,25 @@ exports.updateAchievement = async (req, res) => {
     
     // Update image only if a new file was uploaded
     if (req.file) {
-      updateData.image = `/uploads/achievements/${req.file.filename}`;
+      try {
+        // Delete old image from ImageKit if exists
+        if (achievement.imageKitFileId) {
+          await ImageKitService.deleteImage(achievement.imageKitFileId);
+        }
+        
+        // Upload new image to ImageKit
+        const imageData = await ImageKitService.uploadImage(req.file, 'achievements');
+        updateData.image = imageData.url;
+        updateData.imageKitFileId = imageData.fileId;
+        
+        console.log('✅ New image uploaded to ImageKit:', imageData);
+      } catch (uploadError) {
+        console.error('❌ ImageKit upload failed:', uploadError);
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to upload new image'
+        });
+      }
     }
     
     achievement = await Achievement.findByIdAndUpdate(
@@ -319,7 +249,9 @@ exports.updateAchievement = async (req, res) => {
         new: true,
         runValidators: true
       }
-    ).populate('createdBy', 'name email');
+    );
+    
+    console.log('✅ Achievement updated successfully');
     
     res.status(200).json({
       success: true,
@@ -327,9 +259,9 @@ exports.updateAchievement = async (req, res) => {
       data: achievement
     });
   } catch (error) {
-    console.error('Update achievement error:', error);
+    console.error('❌ Update achievement error:', error);
     
-    // Handle file upload errors
+    // Handle specific errors
     if (error.message.includes('File size too large')) {
       return res.status(400).json({
         success: false,
@@ -371,6 +303,16 @@ exports.updateAchievement = async (req, res) => {
 // @access  Private/Admin
 exports.deleteAchievement = async (req, res) => {
   try {
+    console.log('🟢 [Delete Achievement] Starting for ID:', req.params.id);
+    
+    // Validate ID
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid achievement ID format'
+      });
+    }
+    
     const achievement = await Achievement.findById(req.params.id);
     
     if (!achievement) {
@@ -380,7 +322,14 @@ exports.deleteAchievement = async (req, res) => {
       });
     }
     
+    // Delete image from ImageKit if exists
+    if (achievement.imageKitFileId) {
+      await ImageKitService.deleteImage(achievement.imageKitFileId);
+    }
+    
     await Achievement.findByIdAndDelete(req.params.id);
+    
+    console.log('✅ Achievement deleted successfully');
     
     res.status(200).json({
       success: true,
@@ -388,7 +337,7 @@ exports.deleteAchievement = async (req, res) => {
       data: {}
     });
   } catch (error) {
-    console.error('Delete achievement error:', error);
+    console.error('❌ Delete achievement error:', error);
     if (error.name === 'CastError') {
       return res.status(400).json({
         success: false,
@@ -402,32 +351,96 @@ exports.deleteAchievement = async (req, res) => {
   }
 };
 
+// @desc    Get all achievements
+// @route   GET /api/achievements
+// @access  Public
+exports.getAllAchievements = async (req, res) => {
+  try {
+    console.log('🟢 [Get All Achievements] Fetching...');
+    const achievements = await Achievement.find({}).sort({ date: -1 });
+    
+    console.log(`✅ Found ${achievements.length} achievements`);
+    
+    res.status(200).json({
+      success: true,
+      count: achievements.length,
+      data: achievements
+    });
+  } catch (error) {
+    console.error('❌ Get all achievements error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching achievements'
+    });
+  }
+};
+
+// @desc    Get single achievement by ID
+// @route   GET /api/achievements/:id
+// @access  Public
+exports.getAchievementById = async (req, res) => {
+  try {
+    console.log('🔍 [Get Achievement] Fetching with ID:', req.params.id);
+    
+    // Validate ID format
+    if (!req.params.id || !mongoose.Types.ObjectId.isValid(req.params.id)) {
+      console.log('❌ Invalid ID format:', req.params.id);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid achievement ID format'
+      });
+    }
+
+    const achievement = await Achievement.findById(req.params.id);
+    
+    if (!achievement) {
+      console.log('❌ Achievement not found for ID:', req.params.id);
+      return res.status(404).json({
+        success: false,
+        message: 'Achievement not found'
+      });
+    }
+    
+    console.log('✅ Achievement found:', achievement.title);
+    
+    res.status(200).json({
+      success: true,
+      data: achievement
+    });
+  } catch (error) {
+    console.error('❌ Get achievement by ID error:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid achievement ID'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching achievement'
+    });
+  }
+};
+
 // @desc    Get achievements by category
 // @route   GET /api/achievements/category/:category
 // @access  Public
 exports.getAchievementsByCategory = async (req, res) => {
   try {
-    const { category } = req.params;
-    const { page = 1, limit = 100 } = req.query;
+    const category = req.params.category;
+    console.log('🔍 [Get by Category] Fetching:', category);
     
-    const achievements = await Achievement.find({ category })
-      .sort({ date: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .populate('createdBy', 'name email');
+    const achievements = await Achievement.find({ category }).sort({ date: -1 });
     
-    const total = await Achievement.countDocuments({ category });
+    console.log(`✅ Found ${achievements.length} achievements in ${category}`);
     
     res.status(200).json({
       success: true,
       count: achievements.length,
-      total,
-      page: parseInt(page),
-      pages: Math.ceil(total / limit),
       data: achievements
     });
   } catch (error) {
-    console.error('Get achievements by category error:', error);
+    console.error('❌ Get achievements by category error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error while fetching achievements by category'
@@ -440,9 +453,11 @@ exports.getAchievementsByCategory = async (req, res) => {
 // @access  Public
 exports.getHighlightedAchievements = async (req, res) => {
   try {
-    const achievements = await Achievement.find({ highlight: true })
-      .sort({ date: -1 })
-      .populate('createdBy', 'name email');
+    console.log('🔍 [Get Highlighted] Fetching...');
+    
+    const achievements = await Achievement.find({ highlight: true }).sort({ date: -1 }).limit(10);
+    
+    console.log(`✅ Found ${achievements.length} highlighted achievements`);
     
     res.status(200).json({
       success: true,
@@ -450,7 +465,7 @@ exports.getHighlightedAchievements = async (req, res) => {
       data: achievements
     });
   } catch (error) {
-    console.error('Get highlighted achievements error:', error);
+    console.error('❌ Get highlighted achievements error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error while fetching highlighted achievements'
@@ -458,41 +473,52 @@ exports.getHighlightedAchievements = async (req, res) => {
   }
 };
 
-// @desc    Get achievement statistics
+// @desc    Get achievement statistics overview
 // @route   GET /api/achievements/stats/overview
 // @access  Private/Admin
 exports.getAchievementStats = async (req, res) => {
   try {
+    console.log('📊 [Get Stats] Fetching...');
+    
     const totalAchievements = await Achievement.countDocuments();
+    const highlighted = await Achievement.countDocuments({ highlight: true });
+    
+    // Group achievements by category and count them
     const achievementsByCategory = await Achievement.aggregate([
       {
         $group: {
           _id: '$category',
           count: { $sum: 1 }
         }
+      },
+      {
+        $project: {
+          category: '$_id',
+          count: 1,
+          _id: 0
+        }
       }
     ]);
     
-    const highlightedCount = await Achievement.countDocuments({ highlight: true });
-    const recentAchievements = await Achievement.find()
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .select('title student category date');
+    // Get the most recent achievement date
+    const mostRecent = await Achievement.findOne().sort({ date: -1 }).select('title date student');
+    
+    console.log('✅ Stats fetched successfully');
     
     res.status(200).json({
       success: true,
       data: {
         total: totalAchievements,
-        byCategory: achievementsByCategory,
-        highlighted: highlightedCount,
-        recent: recentAchievements
+        highlighted: highlighted,
+        achievementsByCategory,
+        mostRecent
       }
     });
   } catch (error) {
-    console.error('Get achievement stats error:', error);
+    console.error('❌ Get achievement stats error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error while fetching achievement statistics'
+      message: 'Server error while fetching achievement stats'
     });
   }
 };
