@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:3000'; 
+// Environment variable use panni URL eduthukuralam
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
-// Create axios instance with base configuration
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -10,7 +10,7 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to add auth token
+// Mela ulla code same tha irukkum...
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -24,12 +24,10 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
       localStorage.removeItem('token');
       window.location.href = '/';
     }
@@ -37,4 +35,4 @@ api.interceptors.response.use(
   }
 );
 
-export { api }; // CHANGED: Named export instead of default export
+export { api };
