@@ -8,7 +8,7 @@ require('dotenv').config();
 const connectDB = require('./config/db.js'); 
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000; // CHANGED FROM 3000 TO 5000
 connectDB();
 
 // Ensure uploads directory exists
@@ -29,15 +29,24 @@ const ensureUploadsDir = () => {
 
 ensureUploadsDir();
 
-// Middleware - INCREASE PAYLOAD SIZE LIMIT FOR IMAGES
-app.use(cors());
+// Middleware - FIXED CORS CONFIGURATION
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    
+    'http://localhost:3000'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json({ limit: '50mb' })); 
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Static files - IMPROVED CONFIGURATION
+// Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   setHeaders: (res, path) => {
-    // Set proper headers for images
     if (path.endsWith('.jpg') || path.endsWith('.jpeg')) {
       res.setHeader('Content-Type', 'image/jpeg');
     } else if (path.endsWith('.png')) {
@@ -47,9 +56,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
     } else if (path.endsWith('.webp')) {
       res.setHeader('Content-Type', 'image/webp');
     }
-    
-    // Cache control for images
-    res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day cache
+    res.setHeader('Cache-Control', 'public, max-age=86400');
   }
 }));
 
@@ -66,9 +73,10 @@ app.use('/api/notifications', require('./routes/notificationRoutes.js'));
 // Basic route
 app.get('/', (req, res) => {
   res.json({ 
-    'message': 'Server is running! port 3000',
+    'message': 'Server is running! port 5000', // UPDATED PORT
     'imageUpload': 'Image upload system is active',
-    'staticFiles': 'Static file serving is enabled for /uploads'
+    'staticFiles': 'Static file serving is enabled for /uploads',
+    'cors': 'CORS enabled for frontend connections'
   });
 });
 
@@ -79,15 +87,17 @@ app.get('/health', (req, res) => {
   
   res.json({
     status: 'OK',
-    server: 'Running',
+    server: 'Running on port 5000', // UPDATED PORT
     uploadsDirectory: hasUploadsDir ? 'Exists' : 'Missing',
-    uploadsPath: uploadsDir
+    uploadsPath: uploadsDir,
+    cors: 'Enabled for frontend'
   });
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
+  console.log(`🚀 Server is running on port ${PORT}`); // UPDATED PORT
   console.log(`📁 Static files served from: ${path.join(__dirname, 'uploads')}`);
   console.log(`🖼️ Event images available at: http://localhost:${PORT}/uploads/events/`);
+  console.log(`🌐 CORS enabled for: http://localhost:5173 and your deployed domain`);
 });
