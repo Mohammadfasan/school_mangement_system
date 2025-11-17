@@ -1,79 +1,124 @@
-📚 School Management System (MERN Stack)
+#  School Management System (MERN Stack)
 
-A complete School Management System built using the MERN Stack (MongoDB, Express.js, React.js, Node.js).
-Inspired by my Figma UI/UX prototype, this project is designed to simplify school operations with a modern and user-friendly interface.
+A full-stack, responsive School Management System designed to streamline academic and extracurricular activities for admins, teachers, and students. Built with the modern MERN stack and inspired by a detailed Figma UI/UX prototype.
 
-🚀 Features
-🏠 Home Screen
+![MERN Stack](https://img.shields.io/badge/MERN-Full--Stack-green)
+![Status](https://img.shields.io/badge/Status-Locally%20Deployed-success)
 
-Smooth navigation across all modules.
+##  Live Demo & Source
 
-📊 Dashboard
+*   **Frontend Preview:** [Figma Design Prototype](https://www.figma.com/) *(Link your Figma file here)*
+*   **Backend API:** [API Documentation]() *(Link your API docs if any)*
+*   **GitHub Repository:** https://github.com/your-username/your-repo-name *(Replace with your actual link)*
+*   **Live Website:** *Coming soon on AWS...*
 
-Overview of timetable, announcements, and events.
+##  Table of Contents
 
-🎉 Event Management
+- [Features](#-features)
+- [User Roles](#-user-roles)
+- [Tech Stack](#-tech-stack)
+- [Screenshots](#-screenshots)
+- [Installation](#-installation)
+- [Environment Variables](#-environment-variables)
+- [Usage](#-usage)
+- [API Endpoints](#-api-endpoints)
+- [Future Enhancements](#-future-enhancements)
+- [Contributing](#-contributing)
+- [License](#-license)
 
-Create, update, and view school events easily.
+##  Features
 
-🏆 Sports Module
+###  Home Screen
+Smooth and intuitive navigation across all system modules.
 
-Track sports activities, results, and achievements.
+###  Dashboard
+A comprehensive overview for users, featuring:
+- Up-to-date class timetable
+- Latest school announcements
+- Upcoming events calendar
 
-🎖️ Achievements Screen
+###  Event Management
+Easily create, manage, and view all school events and functions.
 
-Display academic & extracurricular awards.
+###  Sports Module
+Dedicated section to track sports activities, schedules, and student achievements in athletics.
 
-🕒 Timetable Screen
+###  Achievements Screen
+Showcase and celebrate academic and extracurricular awards earned by students.
 
-Organized class schedule view.
+###  Timetable Screen
+A well-organized and clear view of daily and weekly class schedules.
 
-👨‍🎓 Student Details
+###  Student Details
+Admins can efficiently manage and view comprehensive student records and profiles.
 
-Manage and view student data efficiently.
+###  Announcements
+A central hub for sharing important news and updates with the entire school community.
 
-📢 Announcements
+##  User Roles
 
-Share important school updates.
+###  Admin
+- Full system access.
+- Manage students, teachers, and classes.
+- Create and update timetables.
+- Post and manage school-wide announcements.
+- Oversee events and achievements.
 
-👥 User Roles
-🔹 Admin Panel
+###  User (Students & Teachers)
+- Personalized dashboard.
+- View personal/class timetables.
+- Browse school events and announcements.
+- Check academic and sports achievements.
 
-Admins can manage:
+##  Tech Stack
 
-Students
+*   **Frontend:** React.js, Context API (or Redux), CSS3
+*   **Backend:** Node.js, Express.js
+*   **Database:** MongoDB with Mongoose ODM
+*   **Authentication:** JWT (JSON Web Tokens)
+*   **Deployment:** AWS (In Progress)
 
-Teachers
+##  Screenshots
 
-Timetables
+*(You can add your screenshots here like this)*
 
-Announcements
+| Dashboard | Event Management | Timetable |
+|:---:|:---:|:---:|
+| <img src="screenshots/dashboard.png" width="250"> | <img src="screenshots/events.png" width="250"> | <img src="screenshots/timetable.png" width="250"> |
 
-Events
+##  Installation
 
-🔹 User Dashboard
+Follow these steps to set up the project locally on your machine.
 
-Students & Teachers can:
+### Prerequisites
+- Node.js (v14 or above)
+- MongoDB (Local instance or MongoDB Atlas)
+- Git
 
-View timetable
+### Steps
 
-Track events
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/your-username/your-repo-name.git
+    cd your-repo-name
+    ```
 
-Check achievements
+2.  **Install Backend Dependencies**
+    ```bash
+    cd server
+    npm install
+    ```
 
-🧠 Tech Stack
-Frontend
+3.  **Install Frontend Dependencies**
+    ```bash
+    cd ../client
+    npm install
+    ```
 
-React.js
+## 🔑 Environment Variables
 
-Tailwind CSS (if used)
+Create a `.env` file in the `backend` directory and add the following:
 
-Backend
-
-Node.js
-
-Express.js
-
-Database
-
-MongoDB
+```env
+# Server Port
+PORT=5000
