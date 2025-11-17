@@ -5,26 +5,7 @@ A full-stack, responsive School Management System designed to streamline academi
 ![MERN Stack](https://img.shields.io/badge/MERN-Full--Stack-green)
 ![Status](https://img.shields.io/badge/Status-Locally%20Deployed-success)
 
-##  Live Demo & Source
 
-*   **Frontend Preview:** [Figma Design Prototype](https://www.figma.com/) *(Link your Figma file here)*
-*   **Backend API:** [API Documentation]() *(Link your API docs if any)*
-*   **GitHub Repository:** https://github.com/your-username/your-repo-name *(Replace with your actual link)*
-*   **Live Website:** *Coming soon on AWS...*
-
-##  Table of Contents
-
-- [Features](#-features)
-- [User Roles](#-user-roles)
-- [Tech Stack](#-tech-stack)
-- [Screenshots](#-screenshots)
-- [Installation](#-installation)
-- [Environment Variables](#-environment-variables)
-- [Usage](#-usage)
-- [API Endpoints](#-api-endpoints)
-- [Future Enhancements](#-future-enhancements)
-- [Contributing](#-contributing)
-- [License](#-license)
 
 ##  Features
 
